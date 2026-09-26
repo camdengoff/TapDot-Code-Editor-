@@ -21,9 +21,9 @@ It is a static page with no build step and no server:
 - **Button actions**: open a link, open a page in a pop-up sheet, open your own pop-up menu
   (like "Next Steps"), copy text with a confirmation message, call, text, email, scroll to a block, share.
 - **Images**: paste a link or upload. Uploads are resized and compressed, then embedded in the export.
-- **Theme**: colors (with presets), card and button corner radius, spacing, fonts, load animation,
+- **Theme**: hex colors with an opacity %, typed or picked (with presets), card and button corner radius, spacing, fonts, load animation,
   and a centered phone-width column or full width on tablet and desktop.
-  Every block can override colors, radius and spacing.
+  Every block can override colors, radius and spacing. Every size slider also has a box to type an exact value.
 - **Time tabs**: the Blocks list has a tab for the normal page plus one per special time
   (for example "Chapel", Tue/Thu 10:00–11:30 CT, or a date range for a season). Pick a tab to see and
   edit that version; the eye button shows or hides a block during that time. The preview follows the tab

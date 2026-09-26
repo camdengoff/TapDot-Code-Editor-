@@ -186,12 +186,21 @@
       return h('input', { type: 'number', value: getp(o, f.k), min: f.min, max: f.max, oninput: (e) => { setp(o, f.k, +e.target.value); ch(); } });
     },
     range(o, f, ch) {
+      // Slider plus a box to type any number (can go past the slider's ends).
       const v = getp(o, f.k);
-      const out = h('span', { class: 'rv' });
-      const show = (x) => { out.textContent = x < 0 ? 'theme' : x + (f.unit || ''); };
-      show(v);
-      const r = h('input', { type: 'range', min: f.min, max: f.max, step: f.step || 1, value: v, oninput: (e) => { setp(o, f.k, +e.target.value); show(+e.target.value); ch(); } });
-      return h('div', { class: 'range' }, r, out);
+      const themeable = f.min < 0; // −1 means "use the theme"
+      const step = f.step || 1;
+      const r = h('input', { type: 'range', min: f.min, max: f.max, step, value: v });
+      const num = h('input', { type: 'number', class: 'rnum', step, value: themeable && v < 0 ? '' : v, placeholder: themeable ? 'theme' : '' });
+      r.oninput = (e) => { const x = +e.target.value; num.value = themeable && x < 0 ? '' : x; setp(o, f.k, x); ch(); };
+      num.oninput = (e) => {
+        const raw = e.target.value.trim();
+        if (raw === '') { if (themeable) { setp(o, f.k, -1); r.value = -1; ch(); } return; }
+        const x = +raw;
+        if (!isFinite(x)) return;
+        setp(o, f.k, x); r.value = x; ch();
+      };
+      return h('div', { class: 'range' }, r, h('span', { class: 'rbox' }, num, f.unit ? h('span', { class: 'unit' }, f.unit) : null));
     },
     checkbox(o, f, ch) {
       return h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: !!getp(o, f.k), onchange: (e) => { setp(o, f.k, e.target.checked); ch(true); } }), h('span', null, f.l));
@@ -215,22 +224,41 @@
           } }), d)));
     },
     color(o, f, ch) {
-      const v = getp(o, f.k) || '';
-      const txt = h('input', { type: 'text', value: v, placeholder: 'theme', class: 'ctext' });
+      // Hex is the base format: #rrggbb, or #rrggbbaa when an opacity below 100% is set.
+      const cv = document.createElement('canvas').getContext('2d');
       const toHex = (c) => {
-        const x = document.createElement('canvas').getContext('2d');
-        x.fillStyle = '#000'; x.fillStyle = c || '#000';
-        const s = x.fillStyle;
-        if (s[0] === '#') return s;
-        const m = /(\d+),\s*(\d+),\s*(\d+)/.exec(s);
-        return m ? '#' + [m[1], m[2], m[3]].map((n) => (+n).toString(16).padStart(2, '0')).join('') : '#000000';
+        const x = TD.hex(c);
+        if (!x || /^#[0-9a-f]{6}([0-9a-f]{2})?$/.test(x)) return x;
+        cv.fillStyle = '#000'; cv.fillStyle = x; // named colors like "red"
+        return TD.hex(cv.fillStyle);
       };
-      const sw = h('input', { type: 'color', value: toHex(v) });
-      const chip = h('span', { class: 'chip', style: { background: v || 'transparent' } }, sw);
-      sw.oninput = (e) => { txt.value = e.target.value; chip.style.background = e.target.value; setp(o, f.k, e.target.value); ch(); };
-      txt.oninput = (e) => { chip.style.background = e.target.value || 'transparent'; sw.value = toHex(e.target.value); setp(o, f.k, e.target.value.trim()); ch(); };
-      const clr = h('button', { class: 'ghost sm', title: 'Clear', onclick: () => { txt.value = ''; chip.style.background = 'transparent'; setp(o, f.k, ''); ch(); } }, '✕');
-      return h('div', { class: 'color' }, chip, txt, clr);
+      let v = getp(o, f.k) || '';
+      if (v && toHex(v) !== v && /^#[0-9a-f]{6}/.test(toHex(v))) { v = toHex(v); setp(o, f.k, v); }
+      const split = (x) => ({ rgb: x ? x.slice(0, 7) : '', a: x && x.length === 9 ? Math.round(parseInt(x.slice(7), 16) / 2.55) : 100 });
+      let cur = split(v);
+      const txt = h('input', { type: 'text', value: cur.rgb, placeholder: 'theme', class: 'ctext', maxlength: 7, spellcheck: false });
+      const op = h('input', { type: 'number', class: 'cop', min: 0, max: 100, value: cur.a, title: 'Opacity %' });
+      const sw = h('input', { type: 'color', value: cur.rgb || '#000000' });
+      const chip = h('span', { class: 'chip' }, sw);
+      const paint = () => { chip.style.background = getp(o, f.k) || 'transparent'; };
+      const commit = () => {
+        const a = Math.max(0, Math.min(100, +op.value || 0));
+        const val = cur.rgb ? cur.rgb + (a < 100 ? Math.round(a * 2.55).toString(16).padStart(2, '0') : '') : '';
+        setp(o, f.k, val); paint(); ch();
+      };
+      paint();
+      sw.oninput = (e) => { cur.rgb = e.target.value; txt.value = cur.rgb; commit(); };
+      txt.oninput = (e) => {
+        let t = e.target.value.trim();
+        if (t && t[0] !== '#') t = '#' + t;
+        if (t === '' || t === '#') { cur.rgb = ''; commit(); return; }
+        const x = toHex(t);
+        if (/^#[0-9a-f]{6}/.test(x) && t.replace('#', '').length >= 3) { cur.rgb = x.slice(0, 7); sw.value = cur.rgb; commit(); }
+      };
+      txt.onblur = () => { txt.value = cur.rgb; };
+      op.oninput = () => { if (cur.rgb) commit(); };
+      const clr = h('button', { class: 'ghost sm', title: 'Clear', onclick: () => { cur = { rgb: '', a: 100 }; txt.value = ''; op.value = 100; commit(); } }, '✕');
+      return h('div', { class: 'color' }, chip, txt, h('span', { class: 'rbox', title: 'Opacity' }, op, h('span', { class: 'unit' }, '%')), clr);
     },
     emoji(o, f, ch) {
       const inp = h('input', { type: 'text', value: getp(o, f.k) || '', class: 'emoji-in', oninput: (e) => { setp(o, f.k, e.target.value); ch(); } });

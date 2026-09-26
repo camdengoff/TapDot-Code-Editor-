@@ -3,6 +3,26 @@
 (function () {
   const TD = (window.TD = window.TD || {});
 
+  // Any rgb()/rgba()/#rgb color → #rrggbb, or #rrggbbaa when see-through. Other text is returned as-is.
+  TD.hex = (c) => {
+    c = String(c == null ? '' : c).trim();
+    let m = /^#?([0-9a-f]{3,4})$/i.exec(c);
+    if (m) return '#' + m[1].split('').map((x) => x + x).join('').toLowerCase().replace(/ff$/, (x) => (m[1].length === 4 ? '' : x));
+    m = /^#?([0-9a-f]{6}|[0-9a-f]{8})$/i.exec(c);
+    if (m) return ('#' + m[1]).toLowerCase().replace(/^(#[0-9a-f]{6})ff$/, '$1');
+    m = /^rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)(?:[\s,/]+([\d.]+%?))?\s*\)$/i.exec(c);
+    if (!m) return c;
+    let a = m[4] == null ? 1 : m[4].endsWith('%') ? parseFloat(m[4]) / 100 : +m[4];
+    const hx = (n) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, '0');
+    return '#' + hx(+m[1]) + hx(+m[2]) + hx(+m[3]) + (a < 1 ? hx(a * 255) : '');
+  };
+  // Convert every rgb()/rgba() string in a project to hex (older saves used rgba).
+  TD.hexAll = (o) => {
+    if (Array.isArray(o)) o.forEach((v, i) => { if (typeof v === 'string' && /^rgba?\(/i.test(v)) o[i] = TD.hex(v); else if (v && typeof v === 'object') TD.hexAll(v); });
+    else if (o && typeof o === 'object') Object.keys(o).forEach((k) => { const v = o[k]; if (typeof v === 'string' && /^rgba?\(/i.test(v)) o[k] = TD.hex(v); else if (v && typeof v === 'object') TD.hexAll(v); });
+    return o;
+  };
+
   TD.uid = (p) => (p || 'b') + Math.random().toString(36).slice(2, 8);
   TD.clone = (o) => JSON.parse(JSON.stringify(o));
 
@@ -122,7 +142,7 @@
           ],
           newItem: () => ({ label: 'Button', icon: '', iconBg: '', bg: '', color: '', action: TD.newAction('link') }) },
       ],
-      defaults: () => ({ layout: 'scroll', variant: 'card', shape: -1, size: 'md', items: [{ label: 'Button', icon: '⭐', iconBg: 'rgba(59,125,225,0.2)', bg: '', color: '', action: TD.newAction('link') }] }),
+      defaults: () => ({ layout: 'scroll', variant: 'card', shape: -1, size: 'md', items: [{ label: 'Button', icon: '⭐', iconBg: '#3b7de133', bg: '', color: '', action: TD.newAction('link') }] }),
       summary: (b) => b.items.map((i) => i.label).join(' · '),
     },
     banner: {
@@ -137,7 +157,7 @@
         { k: 'arrow', t: 'checkbox', l: 'Show arrow ›' },
         { k: 'action', t: 'action', l: 'When tapped' },
       ],
-      defaults: () => ({ icon: '👋', iconBg: 'rgba(59,125,225,0.2)', image: '', eyebrow: '', title: 'Banner title', subtitle: 'A short description.', arrow: true, action: TD.newAction('link') }),
+      defaults: () => ({ icon: '👋', iconBg: '#3b7de133', image: '', eyebrow: '', title: 'Banner title', subtitle: 'A short description.', arrow: true, action: TD.newAction('link') }),
       summary: (b) => b.title,
     },
     cards: {
@@ -320,7 +340,7 @@
       return n;
     });
     s.sheets = (state.sheets || []).map((sh) => Object.assign(TD.newSheet(), sh));
-    return s;
+    return TD.hexAll(s);
   };
 
   // ── Time tabs (alternate versions of the page at certain times) ────
@@ -359,7 +379,7 @@
         { k: 'desc', t: 'text', l: 'Description', rich: true },
         { k: 'action', t: 'action', l: 'When tapped', noSheet: true },
       ],
-      newItem: () => ({ icon: '⭐', iconBg: 'rgba(59,125,225,0.2)', title: 'Item', desc: '', action: TD.newAction('popup') }) },
+      newItem: () => ({ icon: '⭐', iconBg: '#3b7de133', title: 'Item', desc: '', action: TD.newAction('popup') }) },
   ];
 
   // ── Theme ─────────────────────────────────────────────────────────────
@@ -440,10 +460,10 @@
         const ns = Object.assign(TD.newSheet(), {
           id: 'nextsteps', title: 'Next Steps', subtitle: 'Grow in your faith journey.', icon: '✚',
           items: [
-            { icon: '📖', iconBg: 'rgba(59,125,225,0.2)', title: 'Discipleship Courses', desc: 'Short, weekly courses to help you follow Jesus and grow intentionally.', action: act('popup', { url: PROXY + '/next-steps', title: 'Discipleship Courses', icon: '📖' }) },
-            { icon: '💧', iconBg: 'rgba(16,185,129,0.2)', title: 'Baptism', desc: 'Take the next step and make your faith public through baptism.', action: act('popup', { url: PROXY + '/baptism', title: 'Baptism', icon: '💧' }) },
-            { icon: '👥', iconBg: 'rgba(251,191,36,0.2)', title: 'Group Life', desc: 'Do life with others in a Community Group that fits your season.', action: act('popup', { url: PROXY + '/group-life', title: 'Group Life', icon: '🤝' }) },
-            { icon: '🤝', iconBg: 'rgba(16,185,129,0.2)', title: 'Serve', desc: 'Be part of what God is doing by serving others with your gifts.', action: act('popup', { url: 'https://tithelymedia.blob.core.windows.net/app-pages/41204/pg-117732.html', title: 'Serve', icon: '🤝' }) },
+            { icon: '📖', iconBg: '#3b7de133', title: 'Discipleship Courses', desc: 'Short, weekly courses to help you follow Jesus and grow intentionally.', action: act('popup', { url: PROXY + '/next-steps', title: 'Discipleship Courses', icon: '📖' }) },
+            { icon: '💧', iconBg: '#10b98133', title: 'Baptism', desc: 'Take the next step and make your faith public through baptism.', action: act('popup', { url: PROXY + '/baptism', title: 'Baptism', icon: '💧' }) },
+            { icon: '👥', iconBg: '#fbbf2433', title: 'Group Life', desc: 'Do life with others in a Community Group that fits your season.', action: act('popup', { url: PROXY + '/group-life', title: 'Group Life', icon: '🤝' }) },
+            { icon: '🤝', iconBg: '#10b98133', title: 'Serve', desc: 'Be part of what God is doing by serving others with your gifts.', action: act('popup', { url: 'https://tithelymedia.blob.core.windows.net/app-pages/41204/pg-117732.html', title: 'Serve', icon: '🤝' }) },
           ],
         });
         p.sheets = [ns];
@@ -462,9 +482,9 @@
             'https://photos.smugmug.com/College/Tap-Tag-Photo-folder/i-qw3rZzw/0/KKctmfZMnCWLcD2Wtrj6H9Khs7jqhJxfbd4GhGJ6r/XL/2025%2001%2007%20-%20College-42-XL.jpg',
           ], hideIn: ['normal'] }, TD.clone(heroText))),
           blk('buttons', { layout: 'scroll', style: { mt: 14 }, items: [
-            { label: 'Ask for Prayer', icon: '🙏', iconBg: 'rgba(251,191,36,0.15)', bg: '', color: '', action: act('popup', { url: PROXY + '/prayer', title: 'Prayer', icon: '🙏' }) },
-            { label: 'Next Steps', icon: '✚', iconBg: 'rgba(59,125,225,0.2)', bg: '', color: '', action: act('sheet', { sheet: 'nextsteps' }) },
-            { label: 'Give', icon: '💵', iconBg: 'rgba(16,185,129,0.15)', bg: '', color: '', action: act('popup', { url: 'https://bethanynaz.org/give', title: 'Give', icon: '💵' }) },
+            { label: 'Ask for Prayer', icon: '🙏', iconBg: '#fbbf2426', bg: '', color: '', action: act('popup', { url: PROXY + '/prayer', title: 'Prayer', icon: '🙏' }) },
+            { label: 'Next Steps', icon: '✚', iconBg: '#3b7de133', bg: '', color: '', action: act('sheet', { sheet: 'nextsteps' }) },
+            { label: 'Give', icon: '💵', iconBg: '#10b98126', bg: '', color: '', action: act('popup', { url: 'https://bethanynaz.org/give', title: 'Give', icon: '💵' }) },
           ] }),
           blk('banner', { icon: '👋', eyebrow: 'New Here?', title: 'Connect with Us', subtitle: 'Share your name with us and let us know you visited!', action: act('link', { url: 'http://bethanynaz.info/connect' }), style: { mt: 6 }, hideIn: ['chapel'] }),
           blk('banner', { icon: '', iconBg: '', title: 'Welcome, College Students!', subtitle: 'Learn more about BFC College', action: act('link', { url: 'https://bethanynaz.org/college' }), style: { mt: 6 }, hideIn: ['normal'] }),
@@ -492,18 +512,18 @@
         const p = TD.newProject();
         p.title = 'Feature Tour';
         p.sheets = [Object.assign(TD.newSheet(), { id: 'contact', title: 'Contact us', subtitle: 'We would love to hear from you', icon: '💬', items: [
-          { icon: '📞', iconBg: 'rgba(16,185,129,0.2)', title: 'Call the office', desc: '(555) 010-2030', action: act('phone', { phone: '5550102030' }) },
-          { icon: '💬', iconBg: 'rgba(59,125,225,0.2)', title: 'Text us', desc: 'We reply within a day', action: act('sms', { phone: '5550102030', body: 'Hi! I have a question:' }) },
-          { icon: '✉️', iconBg: 'rgba(251,191,36,0.2)', title: 'Email', desc: 'hello@example.com', action: act('email', { email: 'hello@example.com', subject: 'Hello' }) },
+          { icon: '📞', iconBg: '#10b98133', title: 'Call the office', desc: '(555) 010-2030', action: act('phone', { phone: '5550102030' }) },
+          { icon: '💬', iconBg: '#3b7de133', title: 'Text us', desc: 'We reply within a day', action: act('sms', { phone: '5550102030', body: 'Hi! I have a question:' }) },
+          { icon: '✉️', iconBg: '#fbbf2433', title: 'Email', desc: 'hello@example.com', action: act('email', { email: 'hello@example.com', subject: 'Hello' }) },
         ] })];
         const pic = (n) => 'https://picsum.photos/seed/tapdot' + n + '/900/600';
         p.blocks = [
           blk('hero', { images: [pic(1), pic(2), pic(3)], interval: 4, textPos: 'overlay', title: '==Feature== Tour', subtitle: 'Every block the editor can make', titleSize: 28, style: { mt: 0 } }),
           blk('buttons', { layout: 'grid2', variant: 'card', items: [
-            { label: 'Contact', icon: '💬', iconBg: 'rgba(59,125,225,0.2)', bg: '', color: '', action: act('sheet', { sheet: 'contact' }) },
-            { label: 'Copy address', icon: '📍', iconBg: 'rgba(251,191,36,0.2)', bg: '', color: '', action: act('copy', { text: '123 Main St, Springfield', toast: 'Address copied' }) },
-            { label: 'Jump to FAQ', icon: '🔽', iconBg: 'rgba(16,185,129,0.2)', bg: '', color: '', action: act('scroll', { target: 'faq' }) },
-            { label: 'Share page', icon: '🔗', iconBg: 'rgba(211,107,255,0.2)', bg: '', color: '', action: act('share', {}) },
+            { label: 'Contact', icon: '💬', iconBg: '#3b7de133', bg: '', color: '', action: act('sheet', { sheet: 'contact' }) },
+            { label: 'Copy address', icon: '📍', iconBg: '#fbbf2433', bg: '', color: '', action: act('copy', { text: '123 Main St, Springfield', toast: 'Address copied' }) },
+            { label: 'Jump to FAQ', icon: '🔽', iconBg: '#10b98133', bg: '', color: '', action: act('scroll', { target: 'faq' }) },
+            { label: 'Share page', icon: '🔗', iconBg: '#d36bff33', bg: '', color: '', action: act('share', {}) },
           ] }),
           blk('banner', { icon: '🎉', eyebrow: 'This week', title: 'Family Night', subtitle: 'Tap to open the sign-up form in a pop-up', action: act('popup', { url: 'https://example.com', title: 'Sign up', icon: '🎉' }) }),
           blk('heading', { title: 'Slides' }),
