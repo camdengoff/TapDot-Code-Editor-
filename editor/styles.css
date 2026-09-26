@@ -240,3 +240,17 @@ dialog::backdrop { background: rgba(0,0,0,.6); backdrop-filter: blur(3px); }
 .rbox .cop { width: 40px; }
 .range input[type=range] { flex: 1; min-width: 0; }
 .ctext { text-transform: lowercase; }
+
+/* hex color picker */
+button.chip { padding: 0; cursor: pointer; }
+.cpick { position: fixed; z-index: 200; width: 244px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px; box-shadow: 0 16px 40px rgba(0,0,0,.5); display: flex; flex-direction: column; gap: 10px; }
+.cp-sv { position: relative; height: 150px; border-radius: 8px; cursor: crosshair; touch-action: none; }
+.cp-dot { position: absolute; width: 14px; height: 14px; margin: -7px 0 0 -7px; border: 2px solid #fff; border-radius: 50%; box-shadow: 0 0 0 1px rgba(0,0,0,.5); pointer-events: none; }
+.cp-hue { position: relative; height: 14px; border-radius: 99px; cursor: pointer; touch-action: none; background: linear-gradient(to right,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00); }
+.cp-hdot { position: absolute; top: 50%; width: 16px; height: 16px; margin: -8px 0 0 -8px; border: 2px solid #fff; border-radius: 50%; box-shadow: 0 0 0 1px rgba(0,0,0,.5); pointer-events: none; }
+.cp-row { display: flex; align-items: center; gap: 8px; }
+.cp-prev { width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0; border: 1px solid var(--line); }
+.cp-lab { font-size: 12px; color: var(--muted); }
+.cp-hex { font-family: ui-monospace, Menlo, monospace; font-size: 13px; padding: 6px 8px; text-transform: lowercase; }
+.cp-recent { display: flex; gap: 5px; flex-wrap: wrap; }
+.cp-recent button { width: 18px; height: 18px; border-radius: 50%; border: 1px solid rgba(255,255,255,.25); padding: 0; }

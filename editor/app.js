@@ -170,6 +170,74 @@
   }
   const dataSize = (u) => (/^data:/.test(u || '') ? Math.round((u.length - u.indexOf(',')) * 0.75) : 0);
 
+
+  // ── Hex color picker (the browser's own picker shows RGB on some systems) ──
+  const hsvToHex = (hh, ss, vv) => {
+    const f = (n) => { const k = (n + hh / 60) % 6; return vv - vv * ss * Math.max(0, Math.min(k, 4 - k, 1)); };
+    return '#' + [f(5), f(3), f(1)].map((x) => Math.round(x * 255).toString(16).padStart(2, '0')).join('');
+  };
+  const hexToHsv = (hex) => {
+    const m = /^#?([0-9a-f]{6})/i.exec(hex || '');
+    if (!m) return [0, 0, 0];
+    const [r, g, b] = [0, 2, 4].map((i) => parseInt(m[1].slice(i, i + 2), 16) / 255);
+    const mx = Math.max(r, g, b), d = mx - Math.min(r, g, b);
+    let hh = 0;
+    if (d) hh = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    return [(hh * 60 + 360) % 360, mx ? d / mx : 0, mx];
+  };
+  let pickerEl = null;
+  function closePicker() { if (pickerEl) { pickerEl.remove(); pickerEl = null; } }
+  document.addEventListener('mousedown', (e) => { if (pickerEl && !pickerEl.contains(e.target) && !e.target.closest('.opens-picker')) closePicker(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closePicker(); });
+  const RECENT = 'tapdot-recent-colors';
+  const recent = () => { try { return JSON.parse(localStorage.getItem(RECENT)) || []; } catch (e) { return []; } };
+  const addRecent = (c) => { try { localStorage.setItem(RECENT, JSON.stringify([c].concat(recent().filter((x) => x !== c)).slice(0, 10))); } catch (e) { /* ignore */ } };
+
+  // Opens next to `anchor`; onPick(hex) fires live while dragging or typing.
+  function openPicker(anchor, start, onPick) {
+    closePicker();
+    let [hh, ss, vv] = hexToHsv(start || '#3b7de1');
+    const sv = h('div', { class: 'cp-sv' }, h('span', { class: 'cp-dot' }));
+    const hue = h('div', { class: 'cp-hue' }, h('span', { class: 'cp-hdot' }));
+    const prev = h('span', { class: 'cp-prev' });
+    const hexIn = h('input', { type: 'text', class: 'cp-hex', maxlength: 7, spellcheck: false });
+    const draw = (from) => {
+      const hex = hsvToHex(hh, ss, vv);
+      sv.style.background = 'linear-gradient(to top,#000,transparent),linear-gradient(to right,#fff,hsl(' + hh + ',100%,50%))';
+      sv.firstChild.style.left = ss * 100 + '%'; sv.firstChild.style.top = (1 - vv) * 100 + '%';
+      hue.firstChild.style.left = (hh / 360) * 100 + '%';
+      prev.style.background = hex;
+      if (from !== 'hex') hexIn.value = hex;
+      return hex;
+    };
+    const emit = (from) => onPick(draw(from));
+    const drag = (el, fn) => el.addEventListener('pointerdown', (e) => {
+      e.preventDefault(); el.setPointerCapture(e.pointerId);
+      const move = (ev) => { const r = el.getBoundingClientRect(); fn(Math.max(0, Math.min(1, (ev.clientX - r.left) / r.width)), Math.max(0, Math.min(1, (ev.clientY - r.top) / r.height))); emit(); };
+      move(e);
+      el.onpointermove = move;
+      el.onpointerup = () => { el.onpointermove = null; addRecent(hsvToHex(hh, ss, vv)); };
+    });
+    drag(sv, (x, y) => { ss = x; vv = 1 - y; });
+    drag(hue, (x) => { hh = x * 360; });
+    hexIn.oninput = () => {
+      let t = hexIn.value.trim(); if (t[0] !== '#') t = '#' + t;
+      const x = TD.hex(t);
+      if (/^#[0-9a-f]{6}$/.test(x) && t.length >= 4) { [hh, ss, vv] = hexToHsv(x); emit('hex'); }
+    };
+    hexIn.onkeydown = (e) => { if (e.key === 'Enter') { addRecent(hsvToHex(hh, ss, vv)); closePicker(); } };
+    const rec = recent();
+    pickerEl = h('div', { class: 'cpick' }, sv, hue,
+      h('div', { class: 'cp-row' }, prev, h('span', { class: 'cp-lab' }, 'Hex'), hexIn,
+        h('button', { type: 'button', class: 'primary sm', onclick: () => { addRecent(hsvToHex(hh, ss, vv)); closePicker(); } }, 'Done')),
+      rec.length ? h('div', { class: 'cp-recent' }, rec.map((c) => h('button', { type: 'button', title: c, style: { background: c }, onclick: () => { [hh, ss, vv] = hexToHsv(c); emit(); } }))) : null);
+    document.body.append(pickerEl);
+    draw();
+    const r = anchor.getBoundingClientRect(), pw = 244, ph = pickerEl.offsetHeight;
+    pickerEl.style.left = Math.max(8, Math.min(innerWidth - pw - 8, r.left)) + 'px';
+    pickerEl.style.top = (r.bottom + ph + 8 > innerHeight ? Math.max(8, r.top - ph - 6) : r.bottom + 6) + 'px';
+  }
+
   // ── Field controls ───────────────────────────────────────────────────
   // Each control gets (obj, field, onChange(structural)) and returns an element.
   const CTRL = {
@@ -238,8 +306,7 @@
       let cur = split(v);
       const txt = h('input', { type: 'text', value: cur.rgb, placeholder: 'theme', class: 'ctext', maxlength: 7, spellcheck: false });
       const op = h('input', { type: 'number', class: 'cop', min: 0, max: 100, value: cur.a, title: 'Opacity %' });
-      const sw = h('input', { type: 'color', value: cur.rgb || '#000000' });
-      const chip = h('span', { class: 'chip' }, sw);
+      const chip = h('button', { type: 'button', class: 'chip opens-picker', title: 'Pick a color' });
       const paint = () => { chip.style.background = getp(o, f.k) || 'transparent'; };
       const commit = () => {
         const a = Math.max(0, Math.min(100, +op.value || 0));
@@ -247,13 +314,13 @@
         setp(o, f.k, val); paint(); ch();
       };
       paint();
-      sw.oninput = (e) => { cur.rgb = e.target.value; txt.value = cur.rgb; commit(); };
+      chip.onclick = () => (pickerEl ? closePicker() : openPicker(chip, cur.rgb, (hex) => { cur.rgb = hex; txt.value = hex; commit(); }));
       txt.oninput = (e) => {
         let t = e.target.value.trim();
         if (t && t[0] !== '#') t = '#' + t;
         if (t === '' || t === '#') { cur.rgb = ''; commit(); return; }
         const x = toHex(t);
-        if (/^#[0-9a-f]{6}/.test(x) && t.replace('#', '').length >= 3) { cur.rgb = x.slice(0, 7); sw.value = cur.rgb; commit(); }
+        if (/^#[0-9a-f]{6}/.test(x) && t.replace('#', '').length >= 3) { cur.rgb = x.slice(0, 7); commit(); }
       };
       txt.onblur = () => { txt.value = cur.rgb; };
       op.oninput = () => { if (cur.rgb) commit(); };
@@ -447,7 +514,8 @@
     };
     const selectNode = (node) => {
       const r = document.createRange(); r.selectNodeContents(node);
-      const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); saved = r.cloneRange();
+      if (document.activeElement === ed) { const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); }
+      saved = r.cloneRange();
     };
     const needSel = () => { toast('Highlight some words first'); };
 
@@ -472,7 +540,8 @@
     const unwrap = (root, sel) => root.querySelectorAll(sel).forEach((x) => x.replaceWith(...x.childNodes));
 
     const paint = (c) => {
-      const r = restore();
+      // Use the remembered range without moving focus (the hex picker may be typing).
+      const r = document.activeElement === ed || !saved ? restore() : saved;
       if (!r || r.collapsed) return needSel();
       const frag = r.extractContents();
       unwrap(frag, 'span[data-c]');
@@ -507,11 +576,15 @@
 
     const keep = (e) => e.preventDefault(); // don't steal the highlight
     const btn = (label, title, fn, cls) => h('button', { type: 'button', class: 'rb ' + (cls || ''), title, onmousedown: keep, onclick: fn }, label);
-    const picker = h('input', { type: 'color', value: '#ff6600', onchange: (e) => paint(e.target.value) });
+    let lastPick = '#ff6600';
+    const pick = h('button', { type: 'button', class: 'rb rb-pick opens-picker', title: 'Any color (hex)', onmousedown: keep, onclick: () => {
+      const r = restore(); if (!r || r.collapsed) return needSel();
+      openPicker(pick, lastPick, (hex) => { lastPick = hex; paint(hex); });
+    } }, '🎨');
     const bar = h('div', { class: 'richbar' },
       btn('Accent', 'Theme accent color', () => paint('accent'), 'rb-accent'),
       SWATCHES.map((c) => { const b = btn('', c, () => paint(c), 'rb-sw'); b.style.background = c; return b; }),
-      h('label', { class: 'rb rb-pick', title: 'Any color' }, '🎨', picker),
+      pick,
       h('span', { class: 'rb-sep' }),
       btn(h('b', null, 'B'), 'Bold', () => cmd('bold')),
       btn(h('i', null, 'I'), 'Italic', () => cmd('italic')),
