@@ -94,6 +94,11 @@
     if (!u) return '<div class="' + (cls || '') + ' td-noimg"></div>';
     return '<img class="' + (cls || '') + '" src="' + esc(u) + '" alt="' + esc(alt || '') + '"' + (lazy === false ? '' : ' loading="lazy"') + ' />';
   };
+  // Icon: emoji text, or an uploaded/linked image.
+  const ico = (v) => {
+    const u = /^(https?:|data:image\/)/i.test(v || '') ? safeUrl(v, true) : '';
+    return u ? '<img class="td-ico" src="' + esc(u) + '" alt="" />' : esc(v);
+  };
   const aspectCss = (a) => (a && a !== 'auto' ? 'aspect-ratio:' + cssv(a) + ';' : '');
 
   // Convert "2026-12-24T18:00" in a given IANA zone to a UTC timestamp.
@@ -151,7 +156,7 @@
         let st = shape;
         if (it.bg) st += 'background:' + cssv(it.bg) + ';border-color:' + cssv(it.bg) + ';';
         if (it.color) st += 'color:' + cssv(it.color) + ';';
-        const icon = it.icon ? '<span class="td-btn-icon"' + (it.iconBg ? ' style="background:' + cssv(it.iconBg) + '"' : ' style="width:auto;background:none"') + '>' + esc(it.icon) + '</span>' : '';
+        const icon = it.icon ? '<span class="td-btn-icon"' + (it.iconBg ? ' style="background:' + cssv(it.iconBg) + '"' : ' style="width:auto;background:none"') + '>' + ico(it.icon) + '</span>' : '';
         return tap('td-btn', it.action, icon + '<span class="td-btn-label">' + md(it.label) + '</span>', ctx, st ? ' style="' + st + '"' : '');
       }).join('');
       return '<div class="td-btns td-btns-' + cssv(b.layout) + ' td-btn-' + cssv(b.variant) + ' td-btn-' + cssv(b.size) + '">' + items + '</div>';
@@ -159,7 +164,7 @@
     banner(b, ctx) {
       let lead = '';
       if (safeUrl(b.image, true)) lead = img(b.image, b.title, 'td-banner-img');
-      else if (b.icon) lead = '<div class="td-banner-icon"' + (b.iconBg ? ' style="background:' + cssv(b.iconBg) + '"' : '') + '>' + esc(b.icon) + '</div>';
+      else if (b.icon) lead = '<div class="td-banner-icon"' + (b.iconBg ? ' style="background:' + cssv(b.iconBg) + '"' : '') + '>' + ico(b.icon) + '</div>';
       const inner = lead + '<div class="td-banner-text">' +
         (b.eyebrow ? '<div class="td-eyebrow">' + md(b.eyebrow) + '</div>' : '') +
         '<div class="td-banner-title td-head">' + md(b.title) + '</div>' +
@@ -181,7 +186,7 @@
       const items = b.items.map((it) => {
         const btn = it.btnLabel ? tap('td-btn td-inline-btn', it.action, esc(it.btnLabel), ctx) : '';
         return '<details class="td-acc-item"' + (it.open ? ' open' : '') + '><summary>' +
-          (it.icon ? '<span class="td-acc-icon">' + esc(it.icon) + '</span>' : '') +
+          (it.icon ? '<span class="td-acc-icon">' + ico(it.icon) + '</span>' : '') +
           '<span class="td-acc-title td-head">' + md(it.title) + '</span><span class="td-acc-chev">›</span></summary>' +
           '<div class="td-acc-body">' + (safeUrl(it.image, true) ? img(it.image, it.title, 'td-acc-img') : '') + md(it.body, true) + btn + '</div></details>';
       }).join('');
@@ -298,6 +303,7 @@ html,body{background:var(--td-bg);color:var(--td-text);font-family:var(--td-font
 .td-tap{cursor:pointer;-webkit-tap-highlight-color:transparent;display:block;transition:background .15s,transform .15s}
 .td-tap.td-card:active,.td-btn.td-tap:active{background:var(--td-card2)}
 ${t.pressFx ? '.td-tap:active{transform:scale(.97)}' : ''}
+.td-ico{width:1.2em;height:1.2em;object-fit:contain;display:block}
 .td-noimg{background:linear-gradient(135deg,var(--td-card2),var(--td-card));width:100%;height:100%;min-height:40px}
 .tdp img{display:block;max-width:100%}
 /* hero */
@@ -529,7 +535,9 @@ ${t.pressFx ? '.td-tap:active{transform:scale(.97)}' : ''}
       var f = $('#td-page-frame'), l = $('#td-page-loader');
       var host = url; try { host = new URL(url, location.href).hostname.replace('www.', ''); } catch (e) {}
       $('#td-page-title').textContent = title || host;
-      $('#td-page-icon').textContent = icon || '🔗';
+      var ic = $('#td-page-icon'); ic.textContent = '';
+      if (/^(https?:|data:image\/)/i.test(icon || '')) { var im = D.createElement('img'); im.className = 'td-ico'; im.src = icon; ic.appendChild(im); }
+      else ic.textContent = icon || '🔗';
       l.style.display = 'block'; f.onload = function () { l.style.display = 'none'; };
       openSheet('td-page'); f.src = url;
     }
@@ -734,10 +742,10 @@ ${t.pressFx ? '.td-tap:active{transform:scale(.97)}' : ''}
       '<button class="td-close" data-td-close aria-label="Close">✕</button></div><div class="td-page-body"><iframe id="td-page-frame" src="about:blank" title="Page"></iframe></div></div>\n';
     p.sheets.forEach((s) => {
       const items = s.items.map((it) => tap('td-mi', it.action,
-        '<div class="td-mi-icon"' + (it.iconBg ? ' style="background:' + cssv(it.iconBg) + '"' : '') + '>' + esc(it.icon) + '</div>' +
+        '<div class="td-mi-icon"' + (it.iconBg ? ' style="background:' + cssv(it.iconBg) + '"' : '') + '>' + ico(it.icon) + '</div>' +
         '<div class="td-mi-text"><div class="td-mi-title td-head">' + md(it.title) + '</div>' + (it.desc ? '<div class="td-mi-desc">' + md(it.desc) + '</div>' : '') + '</div><div class="td-arrow">›</div>', ctx)).join('');
       h += '<div class="td-sheet" id="td-sheet-' + esc(s.id) + '"><div class="td-handle"><span></span></div><div class="td-sheet-head"><div class="td-sheet-head-l">' +
-        (s.icon ? '<div class="td-sheet-icon">' + esc(s.icon) + '</div>' : '') + '<div><div class="td-sheet-title td-head">' + md(s.title) + '</div>' +
+        (s.icon ? '<div class="td-sheet-icon">' + ico(s.icon) + '</div>' : '') + '<div><div class="td-sheet-title td-head">' + md(s.title) + '</div>' +
         (s.subtitle ? '<div class="td-sheet-sub">' + md(s.subtitle) + '</div>' : '') + '</div></div><button class="td-close" data-td-close aria-label="Close">✕</button></div>' +
         '<div class="td-sheet-body">' + items + '</div></div>\n';
     });

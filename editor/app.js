@@ -128,7 +128,7 @@
   function flash(id) { try { $('#preview').contentWindow.postMessage({ tdFlash: id }, '*'); } catch (e) { /* ignore */ } }
 
   // ── Image upload (resized + compressed to keep the export small) ────
-  function readImage(file) {
+  function readImage(file, maxSide) {
     return new Promise((resolve, reject) => {
       const fr = new FileReader();
       fr.onerror = reject;
@@ -138,7 +138,7 @@
         const im = new Image();
         im.onerror = () => resolve(src);
         im.onload = () => {
-          const max = +(state.exp.imgMax || 1400);
+          const max = +(maxSide || state.exp.imgMax || 1400);
           const s = Math.min(1, max / Math.max(im.width, im.height));
           const c = document.createElement('canvas');
           c.width = Math.round(im.width * s); c.height = Math.round(im.height * s);
@@ -159,11 +159,11 @@
       fr.readAsDataURL(file);
     });
   }
-  function pickFiles(multiple, cb) {
+  function pickFiles(multiple, cb, maxSide) {
     const inp = h('input', { type: 'file', accept: 'image/*', multiple });
     inp.onchange = async () => {
       const out = [];
-      for (const f of inp.files) out.push(await readImage(f));
+      for (const f of inp.files) out.push(await readImage(f, maxSide));
       cb(out);
     };
     inp.click();
@@ -328,10 +328,23 @@
       return h('div', { class: 'color' }, chip, txt, h('span', { class: 'rbox', title: 'Opacity' }, op, h('span', { class: 'unit' }, '%')), clr);
     },
     emoji(o, f, ch) {
-      const inp = h('input', { type: 'text', value: getp(o, f.k) || '', class: 'emoji-in', oninput: (e) => { setp(o, f.k, e.target.value); ch(); } });
-      const pop = h('div', { class: 'emoji-pop' }, TD.EMOJIS.map((em) => h('button', { type: 'button', onclick: () => { inp.value = em; setp(o, f.k, em); pop.classList.remove('open'); ch(); } }, em)));
-      const btn = h('button', { type: 'button', class: 'ghost sm', onclick: () => pop.classList.toggle('open') }, 'Pick');
-      return h('div', { class: 'emoji' }, inp, btn, pop);
+      // An icon is an emoji, or an uploaded / linked image (stored as its URL).
+      const wrap = h('div', { class: 'emoji' });
+      const isImg = (v) => /^(https?:|data:image\/)/i.test(v || '');
+      const draw = () => {
+        const v = getp(o, f.k) || '';
+        const upload = h('button', { type: 'button', class: 'ghost sm', title: 'Upload your own icon image', onclick: () => pickFiles(false, (a) => { if (a[0]) { setp(o, f.k, a[0]); draw(); ch(); } }, 160) }, '⬆ Upload icon');
+        if (isImg(v)) {
+          fill(wrap, h('span', { class: 'icon-thumb' }, h('img', { src: v, alt: '' })), upload,
+            h('button', { type: 'button', class: 'ghost sm', onclick: () => { setp(o, f.k, ''); draw(); ch(); } }, 'Remove'));
+          return;
+        }
+        const inp = h('input', { type: 'text', value: v, class: 'emoji-in', oninput: (e) => { setp(o, f.k, e.target.value); ch(); } });
+        const pop = h('div', { class: 'emoji-pop' }, TD.EMOJIS.map((em) => h('button', { type: 'button', onclick: () => { inp.value = em; setp(o, f.k, em); pop.classList.remove('open'); ch(); } }, em)));
+        fill(wrap, inp, h('button', { type: 'button', class: 'ghost sm', onclick: () => pop.classList.toggle('open') }, 'Pick'), upload, pop);
+      };
+      draw();
+      return wrap;
     },
     image(o, f, ch) {
       const wrap = h('div', { class: 'imgf' });
@@ -377,7 +390,7 @@
         const fields = {
           link: [{ k: 'url', t: 'text', l: 'Link', ph: 'https://…' }, { k: 'newTab', t: 'checkbox', l: 'Open in a new tab' }],
           popup: [{ k: 'url', t: 'text', l: 'Page link', ph: 'https://…', hint: 'Some sites refuse to load inside a pop-up; route them through your proxy worker if so.' }, { k: 'title', t: 'text', l: 'Pop-up title' }, { k: 'icon', t: 'emoji', l: 'Pop-up icon' }],
-          sheet: [{ k: 'sheet', t: 'select', l: 'Menu', opts: [['', '— choose —']].concat(state.sheets.map((s) => [s.id, (s.icon ? s.icon + ' ' : '') + s.title])) }],
+          sheet: [{ k: 'sheet', t: 'select', l: 'Menu', opts: [['', '— choose —']].concat(state.sheets.map((s) => [s.id, TD.iconLabel(s.icon) + s.title])) }],
           copy: [{ k: 'text', t: 'textarea', l: 'Text to copy' }, { k: 'toast', t: 'text', l: 'Message after copying' }],
           phone: [{ k: 'phone', t: 'text', l: 'Phone number' }],
           sms: [{ k: 'phone', t: 'text', l: 'Phone number' }, { k: 'body', t: 'text', l: 'Starting message (optional)' }],
@@ -697,7 +710,7 @@
       h('button', { class: 'ttab' + (timeTab === 'normal' ? ' on' : ''), onclick: () => { timeTab = 'normal'; drawPanel(); refresh(); } },
         h('b', null, '🏠 Normal'), h('small', null, 'Any other time')),
       state.times.map((x) => h('button', { class: 'ttab' + (timeTab === x.id ? ' on' : ''), onclick: () => { timeTab = x.id; drawPanel(); refresh(); } },
-        h('b', null, (x.icon ? x.icon + ' ' : '') + (x.name || 'Special time')), h('small', null, TD.describeTime(x)))),
+        h('b', null, TD.iconLabel(x.icon) + (x.name || 'Special time')), h('small', null, TD.describeTime(x)))),
       h('button', { class: 'ttab add', title: 'Make a different version of the page for certain days or times', onclick: () => {
         const n = TD.newTime();
         n.name = 'Special time ' + (state.times.length + 1);
@@ -714,7 +727,7 @@
         h('p', null, 'This is what people see during ', h('b', null, t.name || 'this time'), ' (' + TD.describeTime(t) + '). Blocks marked 🚫 are hidden during this time. New blocks you add here only show during this time.'),
         h('details', { class: 'group', open: !t.days.length && !t.start && !t.from },
           h('summary', null, 'When is “' + (t.name || 'this time') + '”?'),
-          form(t, TD.TIME_FIELDS, () => { changed(); const lab = bar.querySelector('.ttab.on'); if (lab) { lab.querySelector('b').textContent = (t.icon ? t.icon + ' ' : '') + (t.name || 'Special time'); lab.querySelector('small').textContent = TD.describeTime(t); } }, () => changed(true)),
+          form(t, TD.TIME_FIELDS, () => { changed(); const lab = bar.querySelector('.ttab.on'); if (lab) { lab.querySelector('b').textContent = TD.iconLabel(t.icon) + (t.name || 'Special time'); lab.querySelector('small').textContent = TD.describeTime(t); } }, () => changed(true)),
           h('div', { class: 'row', style: { padding: '0 0 12px' } },
             h('button', { class: 'ghost sm danger-t', onclick: () => {
               state.times = state.times.filter((x) => x !== t);
@@ -758,7 +771,7 @@
     return h('div', null,
       h('p', { class: 'intro' }, 'Pop-up menus slide up from the bottom (like “Next Steps”). Point any button at one with the action “Open one of my pop-up menus”.'),
       CTRL.list(state, {
-        k: 'sheets', itemName: 'Pop-up menu', itemLabel: (s) => (s.icon ? s.icon + ' ' : '') + (s.title || 'Menu') + '  (' + s.items.length + ' items)',
+        k: 'sheets', itemName: 'Pop-up menu', itemLabel: (s) => TD.iconLabel(s.icon) + (s.title || 'Menu') + '  (' + s.items.length + ' items)',
         item: TD.SHEET_FIELDS, newItem: () => TD.newSheet(),
       }, () => changed()));
   }

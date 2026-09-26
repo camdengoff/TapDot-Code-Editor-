@@ -23,6 +23,9 @@
     return o;
   };
 
+  // Icon as a short label for lists: the emoji, or 🖼️ for an uploaded image.
+  TD.iconLabel = (v) => (!v ? '' : /^(https?:|data:image\/)/i.test(v) ? '🖼️ ' : v + ' ');
+
   TD.uid = (p) => (p || 'b') + Math.random().toString(36).slice(2, 8);
   TD.clone = (o) => JSON.parse(JSON.stringify(o));
 
@@ -131,7 +134,7 @@
         { k: 'variant', t: 'select', l: 'Style', opts: [['card', 'Card color'], ['accent', 'Accent color'], ['outline', 'Outline']] },
         { k: 'shape', t: 'range', l: 'Button roundness', min: -1, max: 50, unit: 'px', hint: 'Far left (−1) uses the theme button roundness.' },
         { k: 'size', t: 'select', l: 'Size', opts: [['sm', 'Small'], ['md', 'Medium'], ['lg', 'Large']] },
-        { k: 'items', t: 'list', l: 'Buttons', itemName: 'Button', itemLabel: (i) => (i.icon ? i.icon + ' ' : '') + (i.label || 'Button'),
+        { k: 'items', t: 'list', l: 'Buttons', itemName: 'Button', itemLabel: (i) => TD.iconLabel(i.icon) + (i.label || 'Button'),
           item: [
             { k: 'label', t: 'text', l: 'Label', rich: true },
             { k: 'icon', t: 'emoji', l: 'Icon (emoji)' },
@@ -184,7 +187,7 @@
       name: 'Dropdowns', icon: '🔽', desc: 'Expandable questions / sections (FAQ style)',
       fields: [
         { k: 'single', t: 'checkbox', l: 'Only one open at a time' },
-        { k: 'items', t: 'list', l: 'Dropdowns', itemName: 'Dropdown', itemLabel: (i) => (i.icon ? i.icon + ' ' : '') + (i.title || 'Dropdown'),
+        { k: 'items', t: 'list', l: 'Dropdowns', itemName: 'Dropdown', itemLabel: (i) => TD.iconLabel(i.icon) + (i.title || 'Dropdown'),
           item: [
             { k: 'icon', t: 'emoji', l: 'Icon (emoji)' },
             { k: 'title', t: 'text', l: 'Title', rich: true },
@@ -371,7 +374,7 @@
     { k: 'icon', t: 'emoji', l: 'Icon (emoji)' },
     { k: 'title', t: 'text', l: 'Title', rich: true },
     { k: 'subtitle', t: 'text', l: 'Subtitle', rich: true },
-    { k: 'items', t: 'list', l: 'Menu items', itemName: 'Item', itemLabel: (i) => (i.icon ? i.icon + ' ' : '') + (i.title || 'Item'),
+    { k: 'items', t: 'list', l: 'Menu items', itemName: 'Item', itemLabel: (i) => TD.iconLabel(i.icon) + (i.title || 'Item'),
       item: [
         { k: 'icon', t: 'emoji', l: 'Icon (emoji)' },
         { k: 'iconBg', t: 'color', l: 'Icon background' },
