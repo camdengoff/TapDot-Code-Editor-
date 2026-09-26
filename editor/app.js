@@ -328,10 +328,21 @@
       return h('div', { class: 'color' }, chip, txt, h('span', { class: 'rbox', title: 'Opacity' }, op, h('span', { class: 'unit' }, '%')), clr);
     },
     emoji(o, f, ch) {
-      const inp = h('input', { type: 'text', value: getp(o, f.k) || '', class: 'emoji-in', oninput: (e) => { setp(o, f.k, e.target.value); ch(); } });
+      // Browsers can't open the system emoji panel, so "My emoji" readies the box
+      // and shows the shortcut for this device; typed emoji replace the old one.
+      const ua = navigator.userAgent;
+      const shortcut = /iPhone|iPad|Android/i.test(ua) ? 'Tap the 🙂 or 🌐 key on your keyboard.'
+        : /Mac/i.test(ua) ? 'Press Control + Command + Space (or the 🌐 fn key).'
+          : /Windows/i.test(ua) ? 'Press the Windows key + period (.)' : 'Open your system emoji panel.';
+      const hint = h('div', { class: 'emoji-hint' }, 'Your emoji panel: ' + shortcut);
+      const inp = h('input', { type: 'text', value: getp(o, f.k) || '', class: 'emoji-in',
+        onfocus: (e) => { e.target.select(); hint.classList.add('show'); },
+        onblur: () => hint.classList.remove('show'),
+        oninput: (e) => { setp(o, f.k, e.target.value); ch(); } });
       const pop = h('div', { class: 'emoji-pop' }, TD.EMOJIS.map((em) => h('button', { type: 'button', onclick: () => { inp.value = em; setp(o, f.k, em); pop.classList.remove('open'); ch(); } }, em)));
-      const btn = h('button', { type: 'button', class: 'ghost sm', onclick: () => pop.classList.toggle('open') }, 'Pick');
-      return h('div', { class: 'emoji' }, inp, btn, pop);
+      const mine = h('button', { type: 'button', class: 'ghost sm', title: 'Use your device’s own emoji keyboard', onclick: () => { pop.classList.remove('open'); inp.focus(); inp.select(); } }, '😀 My emoji');
+      const btn = h('button', { type: 'button', class: 'ghost sm', onclick: () => pop.classList.toggle('open') }, 'Quick pick');
+      return h('div', { class: 'emoji-wrap' }, h('div', { class: 'emoji' }, inp, mine, btn, pop), hint);
     },
     image(o, f, ch) {
       const wrap = h('div', { class: 'imgf' });
