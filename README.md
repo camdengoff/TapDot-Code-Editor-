@@ -43,3 +43,21 @@ It is a static page with no build step and no server:
 - `editor/app.js`: editor UI
 - `editor/styles.css`: editor styles
 - `base html`: the original hand-written page the "Bethany tap page" template recreates
+
+## Pop-up proxy (for sites that won't open in a pop-up)
+
+Many sites send headers that forbid being shown inside another page, so "Open page in pop-up sheet"
+shows a blank or error box. `worker/popup-proxy.js` is a small Cloudflare Worker that fetches the page,
+removes those headers, and hands it back so the pop-up can show it.
+
+1. In Cloudflare, open Workers & Pages and either edit your existing proxy worker or create a new one.
+2. Replace its code with `worker/popup-proxy.js` and deploy.
+3. Edit `ALLOWED_HOSTS` at the top to list the sites you want to show in pop-ups. Only those sites are
+   proxied, so strangers can't use your worker as an open proxy.
+4. In the editor's Export tab, paste the worker address (for example `https://bethanynaz-proxy.cgoff.workers.dev`)
+   into **Pop-up proxy → Worker address**.
+
+After that, paste normal links into pop-up buttons and they go through the worker automatically.
+Old-style links such as `https://<worker>/prayer` still map to `https://bethanynaz.org/prayer`.
+A button can opt out with "Skip the pop-up proxy for this link". Logins, payments and some forms may
+not work when proxied; open those as normal links instead.

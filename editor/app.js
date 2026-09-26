@@ -389,7 +389,9 @@
         const opts = TD.ACTIONS.filter(([v]) => !(f.noSheet && v === 'sheet'));
         const fields = {
           link: [{ k: 'url', t: 'text', l: 'Link', ph: 'https://…' }, { k: 'newTab', t: 'checkbox', l: 'Open in a new tab' }],
-          popup: [{ k: 'url', t: 'text', l: 'Page link', ph: 'https://…', hint: 'Some sites refuse to load inside a pop-up; route them through your proxy worker if so.' }, { k: 'title', t: 'text', l: 'Pop-up title' }, { k: 'icon', t: 'emoji', l: 'Pop-up icon' }],
+          popup: [{ k: 'url', t: 'text', l: 'Page link', ph: 'https://…', hint: state.exp.proxy ? 'Paste the normal link. It goes through your pop-up proxy automatically.' : 'Some sites refuse to load inside a pop-up. Set a pop-up proxy in the Export tab so plain links just work.' },
+            { k: 'direct', t: 'checkbox', l: 'Skip the pop-up proxy for this link', when: () => !!state.exp.proxy },
+            { k: 'title', t: 'text', l: 'Pop-up title' }, { k: 'icon', t: 'emoji', l: 'Pop-up icon' }],
           sheet: [{ k: 'sheet', t: 'select', l: 'Menu', opts: [['', '— choose —']].concat(state.sheets.map((s) => [s.id, TD.iconLabel(s.icon) + s.title])) }],
           copy: [{ k: 'text', t: 'textarea', l: 'Text to copy' }, { k: 'toast', t: 'text', l: 'Message after copying' }],
           phone: [{ k: 'phone', t: 'text', l: 'Phone number' }],
@@ -398,9 +400,10 @@
           scroll: [{ k: 'target', t: 'select', l: 'Scroll to', opts: [['', '— choose —']].concat(state.blocks.filter((b) => b.anchor).map((b) => [b.anchor, TD.BLOCKS[b.type].name + ': ' + (TD.BLOCKS[b.type].summary(b) || '').slice(0, 30)])), hint: 'Give a block an Anchor name (in its Style overrides) to list it here.' }],
           share: [{ k: 'title', t: 'text', l: 'Share title (optional)' }, { k: 'url', t: 'text', l: 'Link to share (blank = this page)' }],
         }[a.type] || [];
+        const shown = fields.filter((ff) => !ff.when || ff.when(a));
         fill(box,
           h('select', { onchange: (e) => { a.type = e.target.value; draw(); ch(); } }, opts.map(([v, l]) => h('option', { value: v, selected: a.type === v }, l))),
-          fields.map((ff) => field(a, ff, (s) => (s && ff.t !== 'checkbox' ? (draw(), ch()) : ch()))),
+          shown.map((ff) => field(a, ff, (s) => (s && ff.t !== 'checkbox' ? (draw(), ch()) : ch()))),
           a.type === 'sheet' && !state.sheets.length ? h('div', { class: 'hint' }, 'You have no pop-up menus yet. Make one in the Pop-ups tab.') : null);
       };
       draw();
@@ -804,6 +807,10 @@
         h('button', { class: 'ghost', onclick: () => { const u = URL.createObjectURL(new Blob([exportHtml()], { type: 'text/html' })); window.open(u, '_blank'); } }, '↗ Open')),
       h('div', { id: 'exportSize', class: 'size' }),
       h('textarea', { id: 'exportCode', class: 'mono code', readOnly: true, rows: 14, onfocus: (ev) => ev.target.select() }),
+      h('h3', null, 'Pop-up proxy'),
+      h('div', { class: 'field' }, h('label', { class: 'fl' }, 'Worker address'),
+        h('input', { type: 'url', value: e.proxy || '', placeholder: 'https://your-proxy.workers.dev', oninput: (ev) => { e.proxy = ev.target.value.trim(); changed(); } }),
+        h('div', { class: 'hint' }, 'When set, every “Open page in pop-up sheet” link is sent through this worker so sites that block framing still load. Use the worker in worker/popup-proxy.js (setup steps in the README). Leave blank to use links exactly as typed.')),
       h('h3', null, 'Export options'),
       opt('squarespace', 'Squarespace code block fixes', 'Forces the page background onto Squarespace wrappers, removes their padding and hides the site search bar, like base html does.'),
       h('div', { class: 'field' }, h('label', { class: 'fl' }, 'Layout'),

@@ -59,7 +59,7 @@
   ];
   TD.EMOJIS = '🙏 ✚ 💵 👋 🚧 🤝 📖 💧 👥 📅 ⛪ ✝️ ❤️ 🎉 📣 🎵 🎤 📺 ▶️ 📍 📞 ✉️ 💬 🔗 📋 🍕 ☕ 🎁 🙌 👶 🎮 📚 👴 🏠 🚗 🕒 ⭐ 🔥 🌱 💡 ✅ 📷 🎬 🧭 🛐 🕊️ 🌎 💒'.split(' ');
 
-  TD.newAction = (type) => ({ type: type || 'none', url: '', newTab: false, title: '', icon: '', sheet: '', text: '', toast: 'Copied!', phone: '', body: '', email: '', subject: '', target: '' });
+  TD.newAction = (type) => ({ type: type || 'none', url: '', newTab: false, title: '', icon: '', sheet: '', text: '', toast: 'Copied!', phone: '', body: '', email: '', subject: '', target: '', direct: false });
 
   // ── Fields every block gets (style + visibility) ─────────────────────
   TD.COMMON_FIELDS = [
@@ -436,7 +436,7 @@
       radius: 14, btnRadius: 50, imgRadius: 12, side: 14, gap: 10, padTop: 20, padBottom: 24, maxWidth: 480, widthMode: 'column',
       shadow: false, font: 'Inter', headFont: '', fontSize: 15, anim: 'slide', pressFx: false,
     }),
-    exp: { squarespace: true, layout: 'app', fullDoc: true, embed: true, imgMax: 1400, imgQ: 0.82 },
+    exp: { squarespace: true, layout: 'app', fullDoc: true, embed: true, imgMax: 1400, imgQ: 0.82, proxy: '' },
     times: [],
     blocks: [],
     sheets: [],

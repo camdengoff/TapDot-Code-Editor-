@@ -58,7 +58,7 @@
         const u = safeUrl(a.url);
         if (!u) return { attrs: ' role="button"', live: false };
         ctx.usesPage = true;
-        return { attrs: ' href="' + esc(u) + '"' + d('act', 'popup') + d('title', a.title || '') + d('icon', a.icon || '🔗'), live: true };
+        return { attrs: ' href="' + esc(proxied(u, a, ctx)) + '"' + d('act', 'popup') + d('title', a.title || '') + d('icon', a.icon || '🔗'), live: true };
       }
       case 'sheet':
         if (!a.sheet) return { attrs: ' role="button"', live: false };
@@ -80,6 +80,15 @@
       default:
         return { attrs: '', live: false };
     }
+  }
+
+  // Send pop-up pages through the pop-up proxy worker, when one is set, so sites that
+  // refuse to be framed still load. Links already on the proxy are left alone.
+  function proxied(u, a, ctx) {
+    const px = String(ctx.proxy || '').trim().replace(/\/+$/, '');
+    if (!px || a.direct || !/^https?:/i.test(u)) return u;
+    try { if (new URL(u).host === new URL(px).host) return u; } catch (e) { return u; }
+    return px + '/?url=' + encodeURIComponent(u);
   }
 
   // `<a>` when the action does something, `<div>` otherwise.
@@ -777,7 +786,7 @@ ${t.pressFx ? '.td-tap:active{transform:scale(.97)}' : ''}
    */
   TD.render = function (p, opts) {
     opts = opts || {};
-    const ctx = { title: p.title };
+    const ctx = { title: p.title, proxy: p.exp.proxy };
     const t = p.theme;
     const anim = t.anim !== 'none' && !opts.noAnim;
     let n = 0;
