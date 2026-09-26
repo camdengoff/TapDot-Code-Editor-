@@ -21,11 +21,15 @@ It is a static page with no build step and no server:
 - **Button actions**: open a link, open a page in a pop-up sheet, open your own pop-up menu
   (like "Next Steps"), copy text with a confirmation message, call, text, email, scroll to a block, share.
 - **Images**: paste a link or upload. Uploads are resized and compressed, then embedded in the export.
-- **Theme**: colors (with presets), card and button corner radius, spacing, fonts, load animation.
+- **Theme**: colors (with presets), card and button corner radius, spacing, fonts, load animation,
+  and a centered phone-width column or full width on tablet and desktop.
   Every block can override colors, radius and spacing.
-- **Schedules**: show or hide any block on certain days, times and dates (this replaces the
-  hard-coded chapel mode; the Bethany template sets it up for Tue/Thu 10:00–11:30 CT).
-  The preview's schedule menu lets you check both states.
+- **Time tabs**: the Blocks list has a tab for the normal page plus one per special time
+  (for example "Chapel", Tue/Thu 10:00–11:30 CT, or a date range for a season). Pick a tab to see and
+  edit that version; the eye button shows or hides a block during that time. The preview follows the tab
+  you're editing, or can show what's live right now.
+- **Word colors**: text fields have a toolbar. Select words, then tap a color, Accent, bold, italic or link.
+  It writes simple markup such as `[[#ef4444|words]]`, `[[accent|words]]`, `**bold**`, `*italic*`.
 - **Export**: copy or download the HTML. Options for the Squarespace fixes, full-screen vs inline layout,
   and keeping an editable copy inside the HTML so it can be reopened later.
 - Autosaves in the browser, plus Save project (`.json`), Open, undo/redo and drag-to-reorder.

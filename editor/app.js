@@ -66,6 +66,7 @@
     if (j < 0 || j >= hist.stack.length) return;
     hist.i = j;
     state = JSON.parse(hist.stack[j]);
+    if (!tabIds().includes(timeTab)) timeTab = 'normal';
     updUndo(); drawPanel(); refresh(true);
   }
 
@@ -82,7 +83,11 @@
 
   // ── Preview ──────────────────────────────────────────────────────────
   let firstRender = true;
-  let forceSched = '';
+  let timeTab = 'normal'; // which time tab the Blocks list is editing
+  let previewLive = false; // preview the live clock instead of the tab being edited
+  let onlyThisTab = false;
+  const tabIds = () => ['normal'].concat(state.times.map((t) => t.id));
+  const tabName = (id) => (id === 'normal' ? 'Normal' : ((state.times.find((t) => t.id === id) || {}).name || 'Special time'));
   function refresh() {
     const frame = $('#preview');
     let scroll = 0;
@@ -91,7 +96,7 @@
       const r = d && (d.getElementById('td-root') || d.scrollingElement);
       if (r) scroll = r.scrollTop;
     } catch (e) { /* ignore */ }
-    const html = TD.render(state, { preview: true, noAnim: !firstRender, forceSched });
+    const html = TD.render(state, { preview: true, noAnim: !firstRender, forceTime: previewLive ? '' : timeTab });
     firstRender = false;
     frame.onload = () => {
       try {
@@ -320,8 +325,42 @@
     },
   };
 
+  // Formatting toolbar for text that supports **bold**, *italic*, [[color|words]] and links.
+  const SWATCHES = ['#ef4444', '#f97316', '#facc15', '#22c55e', '#3b82f6', '#a855f7', '#ec4899', '#ffffff', '#111111'];
+  function richBar(inp) {
+    const wrapSel = (before, after, ph) => {
+      const s = inp.selectionStart, e = inp.selectionEnd;
+      const sel = inp.value.slice(s, e) || ph;
+      inp.setRangeText(before + sel + after, s, e, 'end');
+      inp.setSelectionRange(s + before.length, s + before.length + sel.length);
+      inp.focus();
+      inp.dispatchEvent(new Event('input'));
+    };
+    const color = (c) => wrapSel('[[' + c + '|', ']]', 'words');
+    const keep = (e) => e.preventDefault(); // keep the text selection when clicking a button
+    const btn = (label, title, fn, cls) => h('button', { type: 'button', class: 'rb ' + (cls || ''), title, onmousedown: keep, onclick: fn }, label);
+    const picker = h('input', { type: 'color', value: '#ff6600', title: 'Any color', oninput: null, onchange: (e) => color(e.target.value) });
+    return h('div', { class: 'richbar' },
+      btn(h('b', null, 'B'), 'Bold', () => wrapSel('**', '**', 'bold text')),
+      btn(h('i', null, 'I'), 'Italic', () => wrapSel('*', '*', 'italic text')),
+      h('span', { class: 'rb-sep' }),
+      btn('Accent', 'Color the selected words with the theme accent color', () => color('accent'), 'rb-accent'),
+      SWATCHES.map((c) => btn('', 'Color selected words ' + c, () => color(c), 'rb-sw')).map((b, i) => { b.style.background = SWATCHES[i]; return b; }),
+      h('label', { class: 'rb rb-pick', title: 'Pick any color', onmousedown: () => {} }, '🎨', picker),
+      h('span', { class: 'rb-sep' }),
+      btn('🔗', 'Make the selected words a link', () => wrapSel('[', '](https://)', 'link text')),
+      btn('Clear', 'Remove formatting from the selected words', () => {
+        const s = inp.selectionStart, e = inp.selectionEnd;
+        const all = s === e;
+        const a = all ? 0 : s, z = all ? inp.value.length : e;
+        const clean = inp.value.slice(a, z).replace(/\[\[[^|\]]*\|/g, '').replace(/\]\]/g, '').replace(/\*\*|==|\*/g, '').replace(/\[([^\]]+)\]\([^)]*\)/g, '$1');
+        inp.setRangeText(clean, a, z, 'select'); inp.focus(); inp.dispatchEvent(new Event('input'));
+      }));
+  }
+
   function field(o, f, ch) {
-    const c = CTRL[f.t](o, f, ch);
+    let c = CTRL[f.t](o, f, ch);
+    if (f.rich) c = h('div', { class: 'rich' }, richBar(c), c);
     if (f.t === 'checkbox') return h('div', { class: 'field' }, c, f.hint ? h('div', { class: 'hint' }, f.hint) : null);
     return h('div', { class: 'field' }, h('label', { class: 'fl' }, f.l), c, f.hint ? h('div', { class: 'hint' }, f.hint) : null);
   }
@@ -365,17 +404,30 @@
       if (s) s.textContent = summaryOf(b);
     });
   }
-  const summaryOf = (b) => String(TD.BLOCKS[b.type].summary(b) || '').replace(/[*=]{2}|\[|\]\([^)]*\)/g, '').slice(0, 60);
+  const summaryOf = (b) => String(TD.BLOCKS[b.type].summary(b) || '').replace(/\[\[[^|\]]*\||\]\]|[*=]{2}|\[|\]\([^)]*\)/g, '').slice(0, 60);
 
   function blocksTab() {
     const list = h('div', { class: 'blocks' });
     let dragFrom = null;
+    const ids = tabIds();
     state.blocks.forEach((b, i) => {
       const def = TD.BLOCKS[b.type];
       const isOpen = open.has(b.id);
+      const shownHere = !b.hideIn.includes(timeTab);
+      if (onlyThisTab && !shownHere) return;
+      const shownIn = ids.filter((id) => !b.hideIn.includes(id));
+      let chip = null;
+      if (!shownIn.length) chip = h('span', { class: 'chip-t off' }, 'Hidden in every tab');
+      else if (shownIn.length < ids.length) chip = shownIn.length <= ids.length / 2 || ids.length === 2
+        ? h('span', { class: 'chip-t' }, 'Only: ' + shownIn.map(tabName).join(', '))
+        : h('span', { class: 'chip-t' }, 'Not in: ' + ids.filter((id) => b.hideIn.includes(id)).map(tabName).join(', '));
+      const toggleHere = () => {
+        b.hideIn = shownHere ? b.hideIn.concat(timeTab) : b.hideIn.filter((x) => x !== timeTab);
+        changed(true);
+      };
       const move = (d) => { const j = i + d; if (j < 0 || j >= state.blocks.length) return; state.blocks.splice(j, 0, state.blocks.splice(i, 1)[0]); changed(true); };
       const card = h('div', {
-        class: 'block' + (isOpen ? ' open' : '') + (b.hidden ? ' is-hidden' : ''), 'data-block': b.id,
+        class: 'block' + (isOpen ? ' open' : '') + (shownHere ? '' : ' is-hidden'), 'data-block': b.id,
         ondragover: (e) => { if (dragFrom != null) { e.preventDefault(); card.classList.add('drop'); } },
         ondragleave: () => card.classList.remove('drop'),
         ondrop: (e) => { e.preventDefault(); card.classList.remove('drop'); if (dragFrom == null || dragFrom === i) return; state.blocks.splice(i, 0, state.blocks.splice(dragFrom, 1)[0]); dragFrom = null; changed(true); },
@@ -383,10 +435,9 @@
       h('div', { class: 'bhead', onclick: () => { isOpen ? open.delete(b.id) : (open.add(b.id), flash(b.id)); drawPanel(); } },
         h('span', { class: 'grip', title: 'Drag to reorder', draggable: true, onclick: (e) => e.stopPropagation(), ondragstart: (e) => { dragFrom = i; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', b.id); } }, '⠿'),
         h('span', { class: 'bicon' }, def.icon),
-        h('span', { class: 'btitle' }, h('b', null, def.name), h('span', { class: 'bsum' }, summaryOf(b))),
-        b.schedule.on ? h('span', { class: 'badge', title: 'Has a schedule' }, '🕒') : null,
+        h('span', { class: 'btitle' }, h('b', null, def.name), h('span', { class: 'bsum' }, summaryOf(b)), chip),
         h('span', { class: 'tools', onclick: (e) => e.stopPropagation() },
-          h('button', { title: b.hidden ? 'Show block' : 'Hide block', onclick: () => { b.hidden = !b.hidden; changed(true); } }, b.hidden ? '🙈' : '👁'),
+          h('button', { class: 'eye' + (shownHere ? '' : ' off'), title: (shownHere ? 'Hide this block during ' : 'Show this block during ') + tabName(timeTab), onclick: toggleHere }, shownHere ? '👁' : '🚫'),
           h('button', { title: 'Move up', disabled: i === 0, onclick: () => move(-1) }, '↑'),
           h('button', { title: 'Move down', disabled: i === state.blocks.length - 1, onclick: () => move(1) }, '↓'),
           h('button', { title: 'Duplicate', onclick: () => { const c = TD.clone(b); c.id = TD.uid('b'); c.anchor = ''; state.blocks.splice(i + 1, 0, c); open.add(c.id); changed(true); } }, '⧉'),
@@ -395,11 +446,48 @@
       list.append(card);
     });
     return h('div', null,
+      timeTabsBar(),
       h('div', { class: 'tabhead' },
         h('button', { class: 'primary', onclick: () => addBlockDialog() }, '+ Add block'),
+        state.times.length ? h('label', { class: 'check small' }, h('input', { type: 'checkbox', checked: onlyThisTab, onchange: (e) => { onlyThisTab = e.target.checked; drawPanel(); } }), h('span', null, 'Only list blocks in this tab')) : null,
         h('button', { class: 'ghost', onclick: () => { open = open.size ? new Set() : new Set(state.blocks.map((b) => b.id)); drawPanel(); } }, open.size ? 'Collapse all' : 'Expand all')),
       state.blocks.length ? list : h('div', { class: 'empty' }, 'No blocks yet. Tap “Add block” to start.'),
       state.blocks.length ? h('button', { class: 'add-bottom', onclick: () => addBlockDialog() }, '+ Add block') : null);
+  }
+
+  // Tabs across the top of the Blocks list: Normal + one per special time.
+  function timeTabsBar() {
+    const t = state.times.find((x) => x.id === timeTab);
+    const bar = h('div', { class: 'ttabs' },
+      h('button', { class: 'ttab' + (timeTab === 'normal' ? ' on' : ''), onclick: () => { timeTab = 'normal'; drawPanel(); refresh(); } },
+        h('b', null, '🏠 Normal'), h('small', null, 'Any other time')),
+      state.times.map((x) => h('button', { class: 'ttab' + (timeTab === x.id ? ' on' : ''), onclick: () => { timeTab = x.id; drawPanel(); refresh(); } },
+        h('b', null, (x.icon ? x.icon + ' ' : '') + (x.name || 'Special time')), h('small', null, TD.describeTime(x)))),
+      h('button', { class: 'ttab add', title: 'Make a different version of the page for certain days or times', onclick: () => {
+        const n = TD.newTime();
+        n.name = 'Special time ' + (state.times.length + 1);
+        state.times.push(n);
+        // New tab starts as a copy of what Normal shows.
+        state.blocks.forEach((b) => { if (b.hideIn.includes('normal')) b.hideIn.push(n.id); });
+        timeTab = n.id; changed(true); refresh();
+      } }, h('b', null, '+ Time'), h('small', null, 'Add a version')));
+    const info = timeTab === 'normal'
+      ? h('p', { class: 'tinfo' }, state.times.length
+        ? 'This is what people see when none of your special times are happening. Use 👁 on a block to show or hide it here.'
+        : 'Want a different page at certain times (like Chapel on Tue/Thu mornings)? Add a time tab with “+ Time”.')
+      : h('div', { class: 'tinfo special' },
+        h('p', null, 'This is what people see during ', h('b', null, t.name || 'this time'), ' (' + TD.describeTime(t) + '). Blocks marked 🚫 are hidden during this time. New blocks you add here only show during this time.'),
+        h('details', { class: 'group', open: !t.days.length && !t.start && !t.from },
+          h('summary', null, 'When is “' + (t.name || 'this time') + '”?'),
+          form(t, TD.TIME_FIELDS, () => { changed(); const lab = bar.querySelector('.ttab.on'); if (lab) { lab.querySelector('b').textContent = (t.icon ? t.icon + ' ' : '') + (t.name || 'Special time'); lab.querySelector('small').textContent = TD.describeTime(t); } }, () => changed(true)),
+          h('div', { class: 'row', style: { padding: '0 0 12px' } },
+            h('button', { class: 'ghost sm danger-t', onclick: () => {
+              state.times = state.times.filter((x) => x !== t);
+              state.blocks.forEach((b) => { b.hideIn = b.hideIn.filter((x) => x !== t.id); });
+              timeTab = 'normal'; changed(true); refresh(); snapshot(true);
+              toast('Time tab deleted. Use Undo ↶ to bring it back.');
+            } }, 'Delete this time tab'))));
+    return h('div', { class: 'ttwrap' }, bar, info);
   }
 
   function addBlockDialog() {
@@ -408,6 +496,8 @@
       const d = TD.BLOCKS[type];
       return h('button', { class: 'addopt', onclick: () => {
         const b = TD.newBlock(type);
+        // Added while editing a special time → only shows during that time.
+        if (timeTab !== 'normal') b.hideIn = tabIds().filter((id) => id !== timeTab);
         state.blocks.push(b); open = new Set([b.id]); dlg.close(); tab = 'blocks'; changed(true);
         setTimeout(() => { const el = document.querySelector('[data-block="' + b.id + '"]'); if (el) el.scrollIntoView({ behavior: 'smooth' }); flash(b.id); }, 300);
       } }, h('span', { class: 'ai' }, d.icon), h('b', null, d.name), h('small', null, d.desc));
@@ -507,7 +597,7 @@
       if (m) data = JSON.parse(m[1]);
       else data = JSON.parse(txt);
       if (!data || !Array.isArray(data.blocks)) throw new Error('no blocks');
-      state = TD.normalize(data);
+      state = TD.normalize(data); timeTab = 'normal';
       open = new Set(); tab = 'blocks'; firstRender = true;
       changed(true); snapshot(true);
       toast('Project opened');
@@ -528,7 +618,7 @@
     $('#newBtn').onclick = () => {
       $('#tplGrid').replaceChildren(...Object.keys(TD.TEMPLATES).map((k) => h('button', { class: 'addopt', onclick: () => {
         if (!confirm('Replace the current page with “' + TD.TEMPLATES[k].name + '”? (Undo can bring it back.)')) return;
-        state = TD.TEMPLATES[k].build(); open = new Set(); firstRender = true; $('#tplDlg').close(); tab = 'blocks'; changed(true); snapshot(true);
+        state = TD.TEMPLATES[k].build(); timeTab = 'normal'; open = new Set(); firstRender = true; $('#tplDlg').close(); tab = 'blocks'; changed(true); snapshot(true);
       } }, h('b', null, TD.TEMPLATES[k].name))));
       $('#tplDlg').showModal();
     };
@@ -545,7 +635,7 @@
       document.querySelectorAll('[data-dev]').forEach((x) => x.classList.toggle('on', x === b));
       $('#device').dataset.dev = b.dataset.dev;
     }));
-    $('#schedSel').onchange = (e) => { forceSched = e.target.value; refresh(); };
+    $('#schedSel').onchange = (e) => { previewLive = e.target.value === 'live'; refresh(); };
     document.querySelectorAll('dialog').forEach((d) => d.addEventListener('click', (e) => { if (e.target === d) d.close(); }));
     document.addEventListener('keydown', (e) => {
       const mod = e.metaKey || e.ctrlKey;

@@ -52,25 +52,14 @@
       { k: 'anchor', t: 'text', l: 'Anchor name', ph: 'e.g. events', hint: 'Lets buttons scroll to this block.' },
       { k: 'cssClass', t: 'text', l: 'Extra CSS class' },
     ] },
-    { group: 'Show on a schedule', fields: [
-      { k: 'schedule.on', t: 'checkbox', l: 'Only show or hide this block at certain times' },
-      { k: 'schedule.mode', t: 'select', l: 'During the window', opts: [['show', 'Show this block (hidden otherwise)'], ['hide', 'Hide this block (shown otherwise)']], when: (b) => b.schedule.on },
-      { k: 'schedule.days', t: 'days', l: 'Days', when: (b) => b.schedule.on, hint: 'None checked = every day.' },
-      { k: 'schedule.start', t: 'time', l: 'From time', when: (b) => b.schedule.on },
-      { k: 'schedule.end', t: 'time', l: 'Until time', when: (b) => b.schedule.on },
-      { k: 'schedule.from', t: 'date', l: 'Starting date', when: (b) => b.schedule.on, hint: 'Optional, for seasonal content.' },
-      { k: 'schedule.to', t: 'date', l: 'Ending date', when: (b) => b.schedule.on },
-      { k: 'schedule.tz', t: 'select', l: 'Time zone', opts: TD.TIMEZONES, when: (b) => b.schedule.on },
-    ] },
   ];
 
   const commonDefaults = () => ({
     hidden: false, anchor: '', cssClass: '',
     style: { card: '', card2: '', text: '', muted: '', accent: '', radius: -1, mt: -1, side: -1 },
-    schedule: { on: false, mode: 'show', days: [], start: '', end: '', from: '', to: '', tz: 'America/Chicago' },
+    hideIn: [], // time tabs ('normal' or a time id) where this block is hidden
   });
 
-  const TEXT_HINT = 'Formatting: **bold**, *italic*, ==accent color==, [link text](https://…)';
 
   // ── Block types ──────────────────────────────────────────────────────
   TD.BLOCKS = {
@@ -82,8 +71,8 @@
         { k: 'aspect', t: 'select', l: 'Image shape', opts: TD.ASPECTS },
         { k: 'fit', t: 'select', l: 'Image fit', opts: [['cover', 'Fill (crop edges)'], ['contain', 'Fit (show whole image)']] },
         { k: 'textPos', t: 'select', l: 'Title position', opts: [['below', 'Below the image'], ['overlay', 'On top of the image'], ['none', 'No title']] },
-        { k: 'title', t: 'text', l: 'Title', hint: TEXT_HINT, when: (b) => b.textPos !== 'none' },
-        { k: 'subtitle', t: 'text', l: 'Subtitle', when: (b) => b.textPos !== 'none' },
+        { k: 'title', t: 'text', l: 'Title', rich: true, when: (b) => b.textPos !== 'none' },
+        { k: 'subtitle', t: 'text', l: 'Subtitle', when: (b) => b.textPos !== 'none', rich: true },
         { k: 'titleSize', t: 'range', l: 'Title size', min: 14, max: 44, unit: 'px', when: (b) => b.textPos !== 'none' },
         { k: 'align', t: 'select', l: 'Text alignment', opts: [['left', 'Left'], ['center', 'Center']], when: (b) => b.textPos !== 'none' },
         { k: 'action', t: 'action', l: 'When tapped' },
@@ -94,7 +83,7 @@
     heading: {
       name: 'Section heading', icon: '🔤', desc: 'Title with an optional “See all” link',
       fields: [
-        { k: 'title', t: 'text', l: 'Heading', hint: TEXT_HINT },
+        { k: 'title', t: 'text', l: 'Heading', rich: true },
         { k: 'size', t: 'range', l: 'Size', min: 12, max: 36, unit: 'px' },
         { k: 'align', t: 'select', l: 'Alignment', opts: [['left', 'Left'], ['center', 'Center']] },
         { k: 'linkText', t: 'text', l: 'Link text', ph: 'See All' },
@@ -106,7 +95,7 @@
     text: {
       name: 'Text', icon: '📝', desc: 'Paragraphs, plain or in a card',
       fields: [
-        { k: 'body', t: 'textarea', l: 'Text', hint: TEXT_HINT + '. Blank line = new paragraph.' },
+        { k: 'body', t: 'textarea', l: 'Text', rich: true, hint: 'Blank line = new paragraph.' },
         { k: 'size', t: 'range', l: 'Text size', min: 11, max: 28, unit: 'px' },
         { k: 'align', t: 'select', l: 'Alignment', opts: [['left', 'Left'], ['center', 'Center'], ['right', 'Right']] },
         { k: 'muted', t: 'checkbox', l: 'Use secondary (dimmer) text color' },
@@ -124,7 +113,7 @@
         { k: 'size', t: 'select', l: 'Size', opts: [['sm', 'Small'], ['md', 'Medium'], ['lg', 'Large']] },
         { k: 'items', t: 'list', l: 'Buttons', itemName: 'Button', itemLabel: (i) => (i.icon ? i.icon + ' ' : '') + (i.label || 'Button'),
           item: [
-            { k: 'label', t: 'text', l: 'Label' },
+            { k: 'label', t: 'text', l: 'Label', rich: true },
             { k: 'icon', t: 'emoji', l: 'Icon (emoji)' },
             { k: 'iconBg', t: 'color', l: 'Icon circle color' },
             { k: 'bg', t: 'color', l: 'Button color' },
@@ -142,9 +131,9 @@
         { k: 'icon', t: 'emoji', l: 'Icon (emoji)' },
         { k: 'iconBg', t: 'color', l: 'Icon background' },
         { k: 'image', t: 'image', l: 'Image instead of icon' },
-        { k: 'eyebrow', t: 'text', l: 'Small label above title', ph: 'New here?' },
-        { k: 'title', t: 'text', l: 'Title', hint: TEXT_HINT },
-        { k: 'subtitle', t: 'text', l: 'Subtitle' },
+        { k: 'eyebrow', t: 'text', l: 'Small label above title', ph: 'New here?', rich: true },
+        { k: 'title', t: 'text', l: 'Title', rich: true },
+        { k: 'subtitle', t: 'text', l: 'Subtitle', rich: true },
         { k: 'arrow', t: 'checkbox', l: 'Show arrow ›' },
         { k: 'action', t: 'action', l: 'When tapped' },
       ],
@@ -162,8 +151,8 @@
         { k: 'items', t: 'list', l: 'Cards', itemName: 'Card', itemLabel: (i) => i.name || 'Card',
           item: [
             { k: 'image', t: 'image', l: 'Image' },
-            { k: 'tag', t: 'text', l: 'Small label' },
-            { k: 'name', t: 'text', l: 'Name' },
+            { k: 'tag', t: 'text', l: 'Small label', rich: true },
+            { k: 'name', t: 'text', l: 'Name', rich: true },
             { k: 'action', t: 'action', l: 'When tapped' },
           ],
           newItem: () => ({ image: '', tag: 'Label', name: 'Card', action: TD.newAction('popup') }) },
@@ -178,8 +167,8 @@
         { k: 'items', t: 'list', l: 'Dropdowns', itemName: 'Dropdown', itemLabel: (i) => (i.icon ? i.icon + ' ' : '') + (i.title || 'Dropdown'),
           item: [
             { k: 'icon', t: 'emoji', l: 'Icon (emoji)' },
-            { k: 'title', t: 'text', l: 'Title' },
-            { k: 'body', t: 'textarea', l: 'Content', hint: TEXT_HINT },
+            { k: 'title', t: 'text', l: 'Title', rich: true },
+            { k: 'body', t: 'textarea', l: 'Content', rich: true },
             { k: 'image', t: 'image', l: 'Image inside (optional)' },
             { k: 'btnLabel', t: 'text', l: 'Button inside (optional)', ph: 'Learn more' },
             { k: 'action', t: 'action', l: 'Button action', when: (i) => !!i.btnLabel },
@@ -203,8 +192,8 @@
         { k: 'items', t: 'list', l: 'Slides', itemName: 'Slide', itemLabel: (i) => i.title || 'Slide',
           item: [
             { k: 'image', t: 'image', l: 'Image' },
-            { k: 'title', t: 'text', l: 'Title' },
-            { k: 'caption', t: 'text', l: 'Caption' },
+            { k: 'title', t: 'text', l: 'Title', rich: true },
+            { k: 'caption', t: 'text', l: 'Caption', rich: true },
             { k: 'action', t: 'action', l: 'When tapped' },
           ],
           newItem: () => ({ image: '', title: 'Slide', caption: '', action: TD.newAction() }) },
@@ -218,7 +207,7 @@
         { k: 'image', t: 'image', l: 'Image' },
         { k: 'alt', t: 'text', l: 'Description (for screen readers)' },
         { k: 'aspect', t: 'select', l: 'Shape', opts: TD.ASPECTS },
-        { k: 'caption', t: 'text', l: 'Caption' },
+        { k: 'caption', t: 'text', l: 'Caption', rich: true },
         { k: 'action', t: 'action', l: 'When tapped' },
       ],
       defaults: () => ({ image: '', alt: '', aspect: 'auto', caption: '', action: TD.newAction() }),
@@ -239,11 +228,11 @@
     copy: {
       name: 'Copy boxes', icon: '📋', desc: 'Info rows with a Copy button (Wi-Fi, address, giving info…)',
       fields: [
-        { k: 'title', t: 'text', l: 'Card title (optional)' },
+        { k: 'title', t: 'text', l: 'Card title (optional)', rich: true },
         { k: 'btnLabel', t: 'text', l: 'Button label' },
         { k: 'items', t: 'list', l: 'Rows', itemName: 'Row', itemLabel: (i) => i.label || 'Row',
           item: [
-            { k: 'label', t: 'text', l: 'Label' },
+            { k: 'label', t: 'text', l: 'Label', rich: true },
             { k: 'value', t: 'textarea', l: 'Text shown and copied' },
             { k: 'toast', t: 'text', l: 'Message after copying', ph: 'Copied!' },
           ],
@@ -278,7 +267,7 @@
     countdown: {
       name: 'Countdown', icon: '⏳', desc: 'Live countdown to a date',
       fields: [
-        { k: 'label', t: 'text', l: 'Label' },
+        { k: 'label', t: 'text', l: 'Label', rich: true },
         { k: 'target', t: 'datetime', l: 'Counts down to' },
         { k: 'tz', t: 'select', l: 'Time zone', opts: TD.TIMEZONES },
         { k: 'done', t: 'text', l: 'Text when finished' },
@@ -312,29 +301,62 @@
     const s = Object.assign({}, base, state);
     s.theme = Object.assign({}, base.theme, state.theme || {});
     s.exp = Object.assign({}, base.exp, state.exp || {});
+    s.times = (state.times || []).map((t) => Object.assign(TD.newTime(), t));
     s.blocks = (state.blocks || []).filter((b) => TD.BLOCKS[b.type]).map((b) => {
       const d = TD.newBlock(b.type);
       const n = Object.assign(d, b);
       n.style = Object.assign(commonDefaults().style, b.style || {});
-      n.schedule = Object.assign(commonDefaults().schedule, b.schedule || {});
+      n.hideIn = Array.isArray(b.hideIn) ? b.hideIn.slice() : [];
+      if (b.schedule && b.schedule.on) {
+        // Older projects stored a schedule on each block; turn it into a time tab.
+        const w = { days: b.schedule.days || [], start: b.schedule.start || '', end: b.schedule.end || '', from: b.schedule.from || '', to: b.schedule.to || '', tz: b.schedule.tz || 'America/Chicago' };
+        const key = JSON.stringify(w);
+        let t = s.times.find((x) => JSON.stringify({ days: x.days, start: x.start, end: x.end, from: x.from, to: x.to, tz: x.tz }) === key);
+        if (!t) { t = Object.assign(TD.newTime(), w, { name: 'Special time ' + (s.times.length + 1) }); s.times.push(t); }
+        n.hideIn = b.schedule.mode === 'hide' ? [t.id] : ['normal'];
+      }
+      delete n.schedule;
+      if (n.hidden) { n.hideIn = ['normal'].concat(s.times.map((t) => t.id)); n.hidden = false; }
       return n;
     });
     s.sheets = (state.sheets || []).map((sh) => Object.assign(TD.newSheet(), sh));
     return s;
   };
 
+  // ── Time tabs (alternate versions of the page at certain times) ────
+  TD.newTime = () => ({ id: TD.uid('t'), name: 'Special time', icon: '🕒', days: [], start: '', end: '', from: '', to: '', tz: 'America/Chicago' });
+  TD.TIME_FIELDS = [
+    { k: 'name', t: 'text', l: 'Tab name', ph: 'e.g. Chapel' },
+    { k: 'icon', t: 'emoji', l: 'Tab icon' },
+    { k: 'days', t: 'days', l: 'Days', hint: 'None checked = every day.' },
+    { k: 'start', t: 'time', l: 'From' },
+    { k: 'end', t: 'time', l: 'Until' },
+    { k: 'from', t: 'date', l: 'Starting date (optional)', hint: 'Use dates for seasonal versions, like Christmas or VBS week.' },
+    { k: 'to', t: 'date', l: 'Ending date (optional)' },
+    { k: 'tz', t: 'select', l: 'Time zone', opts: TD.TIMEZONES },
+  ];
+  const DAYN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const hm12 = (v) => { if (!v) return ''; const [H, M] = v.split(':').map(Number); return ((H % 12) || 12) + (M ? ':' + String(M).padStart(2, '0') : '') + (H < 12 ? 'am' : 'pm'); };
+  TD.describeTime = (t) => {
+    const parts = [];
+    if (t.days.length && t.days.length < 7) parts.push(t.days.map((d) => DAYN[d]).join('/'));
+    if (t.start || t.end) parts.push((hm12(t.start) || '12am') + '–' + (hm12(t.end) || 'midnight'));
+    if (t.from || t.to) parts.push((t.from || '…') + ' to ' + (t.to || '…'));
+    return parts.join(' · ') || 'Always (set days or times)';
+  };
+
   // ── Pop-up menus (bottom sheets, like “Next Steps”) ──────────────────
   TD.newSheet = () => ({ id: TD.uid('s'), title: 'Menu', subtitle: '', icon: '✚', items: [] });
   TD.SHEET_FIELDS = [
     { k: 'icon', t: 'emoji', l: 'Icon (emoji)' },
-    { k: 'title', t: 'text', l: 'Title' },
-    { k: 'subtitle', t: 'text', l: 'Subtitle' },
+    { k: 'title', t: 'text', l: 'Title', rich: true },
+    { k: 'subtitle', t: 'text', l: 'Subtitle', rich: true },
     { k: 'items', t: 'list', l: 'Menu items', itemName: 'Item', itemLabel: (i) => (i.icon ? i.icon + ' ' : '') + (i.title || 'Item'),
       item: [
         { k: 'icon', t: 'emoji', l: 'Icon (emoji)' },
         { k: 'iconBg', t: 'color', l: 'Icon background' },
-        { k: 'title', t: 'text', l: 'Title' },
-        { k: 'desc', t: 'text', l: 'Description' },
+        { k: 'title', t: 'text', l: 'Title', rich: true },
+        { k: 'desc', t: 'text', l: 'Description', rich: true },
         { k: 'action', t: 'action', l: 'When tapped', noSheet: true },
       ],
       newItem: () => ({ icon: '⭐', iconBg: 'rgba(59,125,225,0.2)', title: 'Item', desc: '', action: TD.newAction('popup') }) },
@@ -360,7 +382,8 @@
       { k: 'gap', t: 'range', l: 'Space between blocks', min: 0, max: 40, unit: 'px' },
       { k: 'padTop', t: 'range', l: 'Space at top of page', min: 0, max: 120, unit: 'px' },
       { k: 'padBottom', t: 'range', l: 'Space at bottom of page', min: 0, max: 120, unit: 'px' },
-      { k: 'maxWidth', t: 'range', l: 'Max page width (tablet/desktop)', min: 320, max: 1000, unit: 'px' },
+      { k: 'widthMode', t: 'select', l: 'Width on tablet and desktop', opts: [['column', 'Centered column (phone-like)'], ['full', 'Full width']] },
+      { k: 'maxWidth', t: 'range', l: 'Column width', min: 320, max: 1200, unit: 'px', when: (t) => t.widthMode !== 'full' },
       { k: 'shadow', t: 'checkbox', l: 'Soft shadow under cards' },
     ] },
     { group: 'Text', open: true, fields: [
@@ -387,10 +410,11 @@
     version: 1,
     title: 'My Page',
     theme: Object.assign({}, TD.PALETTES['Bethany dark'], {
-      radius: 14, btnRadius: 50, imgRadius: 12, side: 14, gap: 10, padTop: 20, padBottom: 24, maxWidth: 480,
+      radius: 14, btnRadius: 50, imgRadius: 12, side: 14, gap: 10, padTop: 20, padBottom: 24, maxWidth: 480, widthMode: 'column',
       shadow: false, font: 'Inter', headFont: '', fontSize: 15, anim: 'slide', pressFx: false,
     }),
     exp: { squarespace: true, layout: 'app', fullDoc: true, embed: true, imgMax: 1400, imgQ: 0.82 },
+    times: [],
     blocks: [],
     sheets: [],
   });
@@ -400,13 +424,12 @@
   const blk = (type, props) => {
     const b = TD.newBlock(type);
     Object.keys(props || {}).forEach((k) => {
-      if (k === 'style' || k === 'schedule') Object.assign(b[k], props[k]);
+      if (k === 'style') Object.assign(b[k], props[k]);
       else b[k] = props[k];
     });
     return b;
   };
   const PROXY = 'https://bethanynaz-proxy.cgoff.workers.dev';
-  const CHAPEL = { on: true, days: [2, 4], start: '10:00', end: '11:30', tz: 'America/Chicago' };
 
   TD.TEMPLATES = {
     bethany: {
@@ -424,9 +447,10 @@
           ],
         });
         p.sheets = [ns];
+        p.times = [Object.assign(TD.newTime(), { id: 'chapel', name: 'Chapel', icon: '🎓', days: [2, 4], start: '10:00', end: '11:30' })];
         const heroText = { textPos: 'below', title: '==Bethany First== Church', subtitle: "We're glad you're here.", style: { mt: 12 } };
         p.blocks = [
-          blk('hero', Object.assign({ images: ['https://tithely-media-prod.s3.us-west-1.wasabisys.com/1153934/header.jpeg'], schedule: Object.assign({ mode: 'hide' }, CHAPEL) }, TD.clone(heroText))),
+          blk('hero', Object.assign({ images: ['https://tithely-media-prod.s3.us-west-1.wasabisys.com/1153934/header.jpeg'], hideIn: ['chapel'] }, TD.clone(heroText))),
           blk('hero', Object.assign({ interval: 7, images: [
             'https://photos.smugmug.com/College/Tap-Tag-Photo-folder/i-xn8PcQP/0/NFCgzMC5pjxggWvsZCq8B9GDRsmdH3DMzpMsTtRxB/XL/2025%2011%2012-20-XL.png',
             'https://photos.smugmug.com/College/Tap-Tag-Photo-folder/i-VWLrSqS/0/KVDB34cSTSKLv68bwP6jCGJZkGxR9MZM4Jkhk7r2B/XL/2025%2011%2012-8-XL.png',
@@ -436,14 +460,14 @@
             'https://photos.smugmug.com/College/Tap-Tag-Photo-folder/i-BQjSf37/0/MnvC2bdRRQDH6kMtNwCVqPLmj53mdktP4SC37xm4Q/XL/GOFF%20-%202025%2008%2027%20Late%20Night%20-51-XL.jpg',
             'https://photos.smugmug.com/College/Tap-Tag-Photo-folder/i-4kp5cZf/0/LXcWTdHX5mBhQDdvRxdHP936CmQhtzvt3KmzwBkGw/XL/GOFF%20-%202025%2008%2027%20Late%20Night%20-52-XL.jpg',
             'https://photos.smugmug.com/College/Tap-Tag-Photo-folder/i-qw3rZzw/0/KKctmfZMnCWLcD2Wtrj6H9Khs7jqhJxfbd4GhGJ6r/XL/2025%2001%2007%20-%20College-42-XL.jpg',
-          ], schedule: Object.assign({ mode: 'show' }, CHAPEL) }, TD.clone(heroText))),
+          ], hideIn: ['normal'] }, TD.clone(heroText))),
           blk('buttons', { layout: 'scroll', style: { mt: 14 }, items: [
             { label: 'Ask for Prayer', icon: '🙏', iconBg: 'rgba(251,191,36,0.15)', bg: '', color: '', action: act('popup', { url: PROXY + '/prayer', title: 'Prayer', icon: '🙏' }) },
             { label: 'Next Steps', icon: '✚', iconBg: 'rgba(59,125,225,0.2)', bg: '', color: '', action: act('sheet', { sheet: 'nextsteps' }) },
             { label: 'Give', icon: '💵', iconBg: 'rgba(16,185,129,0.15)', bg: '', color: '', action: act('popup', { url: 'https://bethanynaz.org/give', title: 'Give', icon: '💵' }) },
           ] }),
-          blk('banner', { icon: '👋', eyebrow: 'New Here?', title: 'Connect with Us', subtitle: 'Share your name with us and let us know you visited!', action: act('link', { url: 'http://bethanynaz.info/connect' }), style: { mt: 6 }, schedule: Object.assign({ mode: 'hide' }, CHAPEL) }),
-          blk('banner', { icon: '', iconBg: '', title: 'Welcome, College Students!', subtitle: 'Learn more about BFC College', action: act('link', { url: 'https://bethanynaz.org/college' }), style: { mt: 6 }, schedule: Object.assign({ mode: 'show' }, CHAPEL) }),
+          blk('banner', { icon: '👋', eyebrow: 'New Here?', title: 'Connect with Us', subtitle: 'Share your name with us and let us know you visited!', action: act('link', { url: 'http://bethanynaz.info/connect' }), style: { mt: 6 }, hideIn: ['chapel'] }),
+          blk('banner', { icon: '', iconBg: '', title: 'Welcome, College Students!', subtitle: 'Learn more about BFC College', action: act('link', { url: 'https://bethanynaz.org/college' }), style: { mt: 6 }, hideIn: ['normal'] }),
           blk('banner', { icon: '🚧', eyebrow: 'Campus Renewal', title: 'Construction In Progress', subtitle: 'Learn more about what to expect.', action: act('link', { url: 'https://www.bethanynaz.org/construction' }), style: { mt: 6 } }),
           blk('banner', { icon: '🤝', title: 'Becoming Course Sign-Up', subtitle: 'Take the next step in becoming part of the BFC community.', action: act('link', { url: 'https://tsiems.wufoo.com/forms/m4s4eo50gl8kmd/' }), style: { mt: 6 } }),
           blk('heading', { title: 'Upcoming Events', linkText: 'See All', action: act('popup', { url: PROXY + '/events', title: 'Event Details', icon: '📅' }), style: { mt: 12 } }),

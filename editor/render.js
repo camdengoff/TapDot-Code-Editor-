@@ -22,6 +22,12 @@
   function md(src, paragraphs) {
     const links = [];
     let s = esc(src || '');
+    // [[#e33|words]] or [[accent|words]] → colored words
+    s = s.replace(/\[\[\s*([#\w(),.%\s]+?)\s*\|(.+?)\]\]/g, (m, c, t) => {
+      const col = c === 'accent' ? 'var(--td-accent)' : c === 'muted' ? 'var(--td-muted)' : cssv(c);
+      links.push('<span style="color:' + col + '">');
+      return '\u0000' + (links.length - 1) + '\u0000' + t + '\u0001';
+    });
     s = s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (m, t, u) => {
       const url = safeUrl(u.replace(/&amp;/g, '&'));
       links.push(url ? '<a href="' + esc(url) + '"' + (/^https?:/i.test(url) ? ' target="_blank" rel="noopener"' : '') + '>' + t + '</a>' : t);
@@ -30,7 +36,7 @@
     s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
       .replace(/(^|[^*])\*(?!\s)(.+?)\*/g, '$1<em>$2</em>')
       .replace(/==(.+?)==/g, '<span class="td-accent">$1</span>');
-    s = s.replace(/\u0000(\d+)\u0000/g, (m, i) => links[+i]);
+    s = s.replace(/\u0000(\d+)\u0000/g, (m, i) => links[+i]).replace(/\u0001/g, '</span>');
     if (paragraphs) {
       return s.split(/\n\s*\n/).map((p) => '<p>' + p.trim().replace(/\n/g, '<br>') + '</p>').join('');
     }
@@ -146,7 +152,7 @@
         if (it.bg) st += 'background:' + cssv(it.bg) + ';border-color:' + cssv(it.bg) + ';';
         if (it.color) st += 'color:' + cssv(it.color) + ';';
         const icon = it.icon ? '<span class="td-btn-icon"' + (it.iconBg ? ' style="background:' + cssv(it.iconBg) + '"' : ' style="width:auto;background:none"') + '>' + esc(it.icon) + '</span>' : '';
-        return tap('td-btn', it.action, icon + '<span class="td-btn-label">' + esc(it.label) + '</span>', ctx, st ? ' style="' + st + '"' : '');
+        return tap('td-btn', it.action, icon + '<span class="td-btn-label">' + md(it.label) + '</span>', ctx, st ? ' style="' + st + '"' : '');
       }).join('');
       return '<div class="td-btns td-btns-' + cssv(b.layout) + ' td-btn-' + cssv(b.variant) + ' td-btn-' + cssv(b.size) + '">' + items + '</div>';
     },
@@ -155,7 +161,7 @@
       if (safeUrl(b.image, true)) lead = img(b.image, b.title, 'td-banner-img');
       else if (b.icon) lead = '<div class="td-banner-icon"' + (b.iconBg ? ' style="background:' + cssv(b.iconBg) + '"' : '') + '>' + esc(b.icon) + '</div>';
       const inner = lead + '<div class="td-banner-text">' +
-        (b.eyebrow ? '<div class="td-eyebrow">' + esc(b.eyebrow) + '</div>' : '') +
+        (b.eyebrow ? '<div class="td-eyebrow">' + md(b.eyebrow) + '</div>' : '') +
         '<div class="td-banner-title td-head">' + md(b.title) + '</div>' +
         (b.subtitle ? '<div class="td-banner-sub">' + md(b.subtitle) + '</div>' : '') + '</div>' +
         (b.arrow ? '<div class="td-arrow">›</div>' : '');
@@ -166,7 +172,7 @@
         const pic = b.variant === 'tile'
           ? '<div class="td-cardimg" style="' + aspectCss(b.aspect) + '">' + img(it.image, it.name) + '</div>'
           : '<div class="td-cardimg" style="width:' + (+b.imgSize || 64) + 'px;height:' + (+b.imgSize || 64) + 'px">' + img(it.image, it.name) + '</div>';
-        const info = '<div class="td-cardinfo">' + (it.tag ? '<div class="td-tag">' + esc(it.tag) + '</div>' : '') + '<div class="td-cardname td-head">' + esc(it.name) + '</div></div>';
+        const info = '<div class="td-cardinfo">' + (it.tag ? '<div class="td-tag">' + md(it.tag) + '</div>' : '') + '<div class="td-cardname td-head">' + md(it.name) + '</div></div>';
         return tap('td-cardi td-card', it.action, pic + info, ctx, b.layout === 'scroll' ? ' style="width:' + (+b.width || 195) + 'px"' : '');
       }).join('');
       return '<div class="td-cards td-cards-' + cssv(b.layout) + ' td-cards-' + cssv(b.variant) + '">' + items + '</div>';
@@ -176,7 +182,7 @@
         const btn = it.btnLabel ? tap('td-btn td-inline-btn', it.action, esc(it.btnLabel), ctx) : '';
         return '<details class="td-acc-item"' + (it.open ? ' open' : '') + '><summary>' +
           (it.icon ? '<span class="td-acc-icon">' + esc(it.icon) + '</span>' : '') +
-          '<span class="td-acc-title td-head">' + esc(it.title) + '</span><span class="td-acc-chev">›</span></summary>' +
+          '<span class="td-acc-title td-head">' + md(it.title) + '</span><span class="td-acc-chev">›</span></summary>' +
           '<div class="td-acc-body">' + (safeUrl(it.image, true) ? img(it.image, it.title, 'td-acc-img') : '') + md(it.body, true) + btn + '</div></details>';
       }).join('');
       return '<div class="td-acc td-card"' + (b.single ? ' data-td-single="1"' : '') + '>' + items + '</div>';
@@ -184,7 +190,7 @@
     slides(b, ctx) {
       const slides = b.items.map((it) => {
         const cap = b.captions !== 'none' && (it.title || it.caption)
-          ? '<div class="td-slide-cap">' + (it.title ? '<div class="td-slide-title td-head">' + esc(it.title) + '</div>' : '') + (it.caption ? '<div class="td-slide-sub">' + esc(it.caption) + '</div>' : '') + '</div>'
+          ? '<div class="td-slide-cap">' + (it.title ? '<div class="td-slide-title td-head">' + md(it.title) + '</div>' : '') + (it.caption ? '<div class="td-slide-sub">' + md(it.caption) + '</div>' : '') + '</div>'
           : '';
         return tap('td-slide td-card', it.action, '<div class="td-slide-media" style="' + aspectCss(b.aspect) + '">' + img(it.image, it.title) + '</div>' + cap, ctx);
       }).join('');
@@ -206,10 +212,10 @@
     },
     copy(b) {
       const rows = b.items.map((it) =>
-        '<div class="td-copy-row"><div class="td-copy-text">' + (it.label ? '<div class="td-tag">' + esc(it.label) + '</div>' : '') +
+        '<div class="td-copy-row"><div class="td-copy-text">' + (it.label ? '<div class="td-tag">' + md(it.label) + '</div>' : '') +
         '<div class="td-copy-val">' + esc(it.value).replace(/\n/g, '<br>') + '</div></div>' +
         '<a href="#" class="td-copy-btn td-tap" data-td-act="copy" data-td-text="' + esc(it.value) + '" data-td-toast="' + esc(it.toast || 'Copied!') + '">' + esc(b.btnLabel || 'Copy') + '</a></div>').join('');
-      return '<div class="td-copy td-card">' + (b.title ? '<div class="td-copy-title td-head">' + esc(b.title) + '</div>' : '') + rows + '</div>';
+      return '<div class="td-copy td-card">' + (b.title ? '<div class="td-copy-title td-head">' + md(b.title) + '</div>' : '') + rows + '</div>';
     },
     events(b, ctx) {
       ctx.usesEvents = true;
@@ -279,7 +285,7 @@ html,body{background:var(--td-bg);color:var(--td-text);font-family:var(--td-font
 #td-root{position:fixed;inset:0;top:0${imp};overflow-y:scroll;-webkit-overflow-scrolling:touch;overscroll-behavior:none;background:var(--td-bg)}
 `;
     }
-    css += `.tdp{max-width:${+t.maxWidth}px;margin:0 auto;padding:${+t.padTop}px 0 ${+t.padBottom}px;color:var(--td-text);font-family:var(--td-font);font-size:${+t.fontSize}px;line-height:1.5}
+    css += `.tdp{max-width:${t.widthMode === 'full' ? 'none' : +t.maxWidth + 'px'};margin:0 auto;padding:${+t.padTop}px 0 ${+t.padBottom}px;color:var(--td-text);font-family:var(--td-font);font-size:${+t.fontSize}px;line-height:1.5}
 .tdp a{color:inherit;text-decoration:none}
 .tdp .td-text a,.tdp .td-acc-body a{color:var(--td-accent);text-decoration:underline}
 .td-b{margin:var(--td-gap) var(--td-side) 0;color:var(--td-text)}
@@ -436,7 +442,7 @@ ${t.pressFx ? '.td-tap:active{transform:scale(.97)}' : ''}
 .td-overlay{font-family:var(--td-font);color:var(--td-text)}
 .td-bd{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
 .td-bd.open{display:block}
-.td-sheet{position:fixed;left:0;right:0;bottom:0;z-index:201;background:var(--td-sheet);border-radius:20px 20px 0 0;max-height:92vh;overflow-y:auto;-webkit-overflow-scrolling:touch;transform:translateY(100%);transition:transform .35s cubic-bezier(.32,.72,0,1);max-width:${Math.max(480, +t.maxWidth)}px;margin:0 auto;visibility:hidden}
+.td-sheet{position:fixed;left:0;right:0;bottom:0;z-index:201;background:var(--td-sheet);border-radius:20px 20px 0 0;max-height:92vh;overflow-y:auto;-webkit-overflow-scrolling:touch;transform:translateY(100%);transition:transform .35s cubic-bezier(.32,.72,0,1);max-width:${t.widthMode === 'full' ? 720 : Math.max(480, +t.maxWidth)}px;margin:0 auto;visibility:hidden}
 .td-sheet.open{transform:translateY(0);visibility:visible}
 .td-sheet.td-page{height:85vh;overflow:hidden;display:flex;flex-direction:column}
 .td-handle{display:flex;justify-content:center;padding:10px 0 4px;flex-shrink:0}
@@ -470,6 +476,11 @@ ${t.pressFx ? '.td-tap:active{transform:scale(.97)}' : ''}
 .td-toast.show{opacity:1;transform:translate(-50%,0)}
 .td-sched-off{display:none !important}
 `;
+    if (t.widthMode === 'full') {
+      // Wide screens: roomier margins, more columns, and heroes that don't fill the whole screen.
+      css += '@media (min-width:700px){.tdp{--td-side:' + Math.max(+t.side, 24) + 'px}.td-cards-grid{grid-template-columns:repeat(3,1fr)}.td-btns-stack{display:grid;grid-template-columns:repeat(2,1fr)}.td-hero-media{max-height:60vh}.td-peek .td-slide{flex-basis:48%}}\n' +
+        '@media (min-width:1100px){.tdp{--td-side:' + Math.max(+t.side, 40) + 'px}.td-cards-grid{grid-template-columns:repeat(4,1fr)}.td-peek .td-slide{flex-basis:32%}}\n';
+    }
     if (t.anim !== 'none') {
       css += '@keyframes tdIn{from{opacity:0;transform:translateY(' + (t.anim === 'slide' ? 28 : 0) + 'px)}to{opacity:1;transform:none}}\n' +
         '.td-anim{opacity:0;animation:tdIn .5s cubic-bezier(.22,1,.36,1) forwards}\n' +
@@ -480,7 +491,7 @@ ${t.pressFx ? '.td-tap:active{transform:scale(.97)}' : ''}
 
   // ── Runtime script (serialized into the page) ────────────────────────
   /* eslint-disable */
-  function tdRuntime() {
+  function tdRuntime(TIMES) {
     var D = document, W = window, PREVIEW = !!W.TD_PREVIEW;
     var root = D.getElementById('td-root');
     function lock(on) { var el = root || D.body; el.style.overflow = on ? 'hidden' : ''; }
@@ -609,8 +620,6 @@ ${t.pressFx ? '.td-tap:active{transform:scale(.97)}' : ''}
     function zNow(tz) { try { return new Date(new Date().toLocaleString('en-US', { timeZone: tz })); } catch (e) { return new Date(); } }
     function hm(s) { var p = String(s).split(':'); return (+p[0] || 0) * 60 + (+p[1] || 0); }
     function inWindow(s) {
-      if (W.TD_FORCE_SCHED === 'on') return true;
-      if (W.TD_FORCE_SCHED === 'off') return false;
       var n = zNow(s.tz || 'America/Chicago');
       var ymd = n.getFullYear() * 10000 + (n.getMonth() + 1) * 100 + n.getDate();
       if (s.from && ymd < +s.from.replace(/-/g, '')) return false;
@@ -622,11 +631,17 @@ ${t.pressFx ? '.td-tap:active{transform:scale(.97)}' : ''}
       }
       return true;
     }
+    // The first time tab whose window is open wins; otherwise the normal page shows.
+    function activeTab() {
+      if (W.TD_FORCE_TIME) return W.TD_FORCE_TIME;
+      for (var i = 0; i < TIMES.length; i++) if (inWindow(TIMES[i])) return TIMES[i].id;
+      return 'normal';
+    }
     function sched() {
-      $$('[data-td-sched]').forEach(function (el) {
-        var s; try { s = JSON.parse(el.getAttribute('data-td-sched')); } catch (e) { return; }
-        var on = inWindow(s);
-        el.classList.toggle('td-sched-off', s.mode === 'hide' ? on : !on);
+      var tab = activeTab();
+      D.documentElement.setAttribute('data-td-time', tab);
+      $$('[data-td-show]').forEach(function (el) {
+        el.classList.toggle('td-sched-off', (' ' + el.getAttribute('data-td-show') + ' ').indexOf(' ' + tab + ' ') < 0);
       });
     }
     sched(); setInterval(sched, 30000);
@@ -720,10 +735,10 @@ ${t.pressFx ? '.td-tap:active{transform:scale(.97)}' : ''}
     p.sheets.forEach((s) => {
       const items = s.items.map((it) => tap('td-mi', it.action,
         '<div class="td-mi-icon"' + (it.iconBg ? ' style="background:' + cssv(it.iconBg) + '"' : '') + '>' + esc(it.icon) + '</div>' +
-        '<div class="td-mi-text"><div class="td-mi-title td-head">' + esc(it.title) + '</div>' + (it.desc ? '<div class="td-mi-desc">' + md(it.desc) + '</div>' : '') + '</div><div class="td-arrow">›</div>', ctx)).join('');
+        '<div class="td-mi-text"><div class="td-mi-title td-head">' + md(it.title) + '</div>' + (it.desc ? '<div class="td-mi-desc">' + md(it.desc) + '</div>' : '') + '</div><div class="td-arrow">›</div>', ctx)).join('');
       h += '<div class="td-sheet" id="td-sheet-' + esc(s.id) + '"><div class="td-handle"><span></span></div><div class="td-sheet-head"><div class="td-sheet-head-l">' +
-        (s.icon ? '<div class="td-sheet-icon">' + esc(s.icon) + '</div>' : '') + '<div><div class="td-sheet-title td-head">' + esc(s.title) + '</div>' +
-        (s.subtitle ? '<div class="td-sheet-sub">' + esc(s.subtitle) + '</div>' : '') + '</div></div><button class="td-close" data-td-close aria-label="Close">✕</button></div>' +
+        (s.icon ? '<div class="td-sheet-icon">' + esc(s.icon) + '</div>' : '') + '<div><div class="td-sheet-title td-head">' + md(s.title) + '</div>' +
+        (s.subtitle ? '<div class="td-sheet-sub">' + md(s.subtitle) + '</div>' : '') + '</div></div><button class="td-close" data-td-close aria-label="Close">✕</button></div>' +
         '<div class="td-sheet-body">' + items + '</div></div>\n';
     });
     if (ctx.usesEvents) {
@@ -750,7 +765,7 @@ ${t.pressFx ? '.td-tap:active{transform:scale(.97)}' : ''}
    * render(project, opts) → HTML string.
    * opts.preview: adds editor hooks (click-to-select, link interception).
    * opts.noAnim: skips entrance animation (used for live re-renders).
-   * opts.forceSched: 'on' | 'off' | '' to simulate schedule windows in preview.
+   * opts.forceTime: a time tab id ('normal' or a time id) to preview; '' follows the clock.
    */
   TD.render = function (p, opts) {
     opts = opts || {};
@@ -758,17 +773,19 @@ ${t.pressFx ? '.td-tap:active{transform:scale(.97)}' : ''}
     const t = p.theme;
     const anim = t.anim !== 'none' && !opts.noAnim;
     let n = 0;
+    const times = p.times || [];
+    const tabIds = ['normal'].concat(times.map((x) => x.id));
     const body = p.blocks.filter((b) => !b.hidden).map((b) => {
       const inner = R[b.type](b, ctx);
       const st = blockStyle(b);
-      const sched = b.schedule && b.schedule.on
-        ? " data-td-sched='" + JSON.stringify({ mode: b.schedule.mode, days: b.schedule.days, start: b.schedule.start, end: b.schedule.end, from: b.schedule.from, to: b.schedule.to, tz: b.schedule.tz }).replace(/'/g, '&#39;').replace(/</g, '\\u003c') + "'"
-        : '';
+      const hide = (b.hideIn || []).filter((id) => tabIds.includes(id));
+      if (hide.length >= tabIds.length) return '';
+      const sched = hide.length ? ' data-td-show="' + esc(tabIds.filter((id) => !hide.includes(id)).join(' ')) + '"' : '';
       const cls = 'td-b td-t-' + b.type + (anim ? ' td-anim' : '') + (b.style && +b.style.side === 0 ? ' td-edge' : '') + (b.cssClass ? ' ' + esc(b.cssClass) : '');
       const delay = anim ? 'animation-delay:' + Math.min(0.05 + n++ * 0.06, 0.6).toFixed(2) + 's;' : '';
       return '<div class="' + cls + '"' + (b.anchor ? ' id="' + esc(b.anchor) + '"' : '') + (opts.preview ? ' data-td-id="' + b.id + '"' : '') + sched +
         ((st || delay) ? ' style="' + delay + st + '"' : '') + '>' + inner + '</div>';
-    }).join('\n');
+    }).filter(Boolean).join('\n');
 
     const css = buildCss(p);
     const app = p.exp.layout === 'app';
@@ -776,9 +793,9 @@ ${t.pressFx ? '.td-tap:active{transform:scale(.97)}' : ''}
     const ov = overlays(p, ctx);
     let pre = '';
     if (opts.preview) {
-      pre = '<script>window.TD_PREVIEW=1;window.TD_FORCE_SCHED=' + JSON.stringify(opts.forceSched || '') + ';</' + 'script>\n';
+      pre = '<script>window.TD_PREVIEW=1;window.TD_FORCE_TIME=' + JSON.stringify(opts.forceTime || '') + ';</' + 'script>\n';
     }
-    let script = '<script>\n(' + tdRuntime.toString() + ')();\n</' + 'script>';
+    let script = '<script>\n(' + tdRuntime.toString() + ')(' + JSON.stringify(times.map((x) => ({ id: x.id, days: x.days, start: x.start, end: x.end, from: x.from, to: x.to, tz: x.tz }))).replace(/</g, '\\u003c') + ');\n</' + 'script>';
     if (opts.preview) {
       script += '\n<script>document.addEventListener("click",function(e){if(!e.altKey&&!window.TD_PICK)return;var b=e.target.closest("[data-td-id]");if(!b)return;e.preventDefault();e.stopPropagation();parent.postMessage({tdSelect:b.getAttribute("data-td-id")},"*")},true);' +
         'window.addEventListener("message",function(e){if(e.data&&"tdPick" in e.data){window.TD_PICK=e.data.tdPick;document.documentElement.classList.toggle("td-picking",!!e.data.tdPick)}if(e.data&&e.data.tdFlash){var el=document.querySelector("[data-td-id=\\""+e.data.tdFlash+"\\"]");if(el){el.scrollIntoView({block:"center",behavior:"smooth"});el.animate([{outline:"3px solid #7c9cff",outlineOffset:"3px"},{outline:"3px solid transparent",outlineOffset:"3px"}],{duration:1200})}}});</' + 'script>' +
