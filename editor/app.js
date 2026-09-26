@@ -325,42 +325,176 @@
     },
   };
 
-  // Formatting toolbar for text that supports **bold**, *italic*, [[color|words]] and links.
+  // ── Rich text: what-you-see editor for text that supports color/bold/italic/links ──
+  // The page stores simple markup ([[#e33|words]], [[accent|words]], **bold**, *italic*,
+  // [text](url)); the editor shows it formatted and converts back on every change.
   const SWATCHES = ['#ef4444', '#f97316', '#facc15', '#22c55e', '#3b82f6', '#a855f7', '#ec4899', '#ffffff', '#111111'];
-  function richBar(inp) {
-    const wrapSel = (before, after, ph) => {
-      const s = inp.selectionStart, e = inp.selectionEnd;
-      const sel = inp.value.slice(s, e) || ph;
-      inp.setRangeText(before + sel + after, s, e, 'end');
-      inp.setSelectionRange(s + before.length, s + before.length + sel.length);
-      inp.focus();
-      inp.dispatchEvent(new Event('input'));
+  const shownColor = (c) => (c === 'accent' ? state.theme.accent : c === 'muted' ? state.theme.muted : c);
+
+  function markupToHtml(src) {
+    const wrap = document.createElement('div');
+    wrap.innerHTML = TD.md(src || '');
+    wrap.querySelectorAll('span').forEach((sp) => {
+      const m = /color:\s*([^;]+)/.exec(sp.getAttribute('style') || '');
+      let c = sp.classList.contains('td-accent') ? 'accent' : m ? m[1].trim() : '';
+      if (c === 'var(--td-accent)') c = 'accent';
+      if (c === 'var(--td-muted)') c = 'muted';
+      if (!c) return;
+      sp.removeAttribute('class'); sp.dataset.c = c; sp.style.color = shownColor(c);
+    });
+    wrap.querySelectorAll('a').forEach((a) => { a.removeAttribute('target'); a.removeAttribute('rel'); });
+    return wrap.innerHTML;
+  }
+
+  function htmlToMarkup(root) {
+    let out = '';
+    const colors = [];
+    const walk = (node) => {
+      node.childNodes.forEach((n, i) => {
+        if (n.nodeType === 3) { out += n.nodeValue.replace(/ /g, ' '); return; }
+        if (n.nodeType !== 1) return;
+        const tag = n.tagName;
+        if (tag === 'BR') { out += '\n'; return; }
+        if ((tag === 'DIV' || tag === 'P') && (out && !out.endsWith('\n'))) out += '\n';
+        if (tag === 'B' || tag === 'STRONG') { out += '**'; walk(n); out += '**'; return; }
+        if (tag === 'I' || tag === 'EM') { out += '*'; walk(n); out += '*'; return; }
+        if (tag === 'A') { out += '['; walk(n); out += '](' + (n.getAttribute('href') || '') + ')'; return; }
+        if (tag === 'SPAN' && n.dataset.c) {
+          // Colors never nest in markup: close the outer color around an inner one.
+          if (colors.length) out += ']]';
+          colors.push(n.dataset.c);
+          out += '[[' + n.dataset.c + '|';
+          walk(n);
+          out += ']]';
+          colors.pop();
+          if (colors.length) out += '[[' + colors[colors.length - 1] + '|';
+          return;
+        }
+        walk(n);
+      });
     };
-    const color = (c) => wrapSel('[[' + c + '|', ']]', 'words');
-    const keep = (e) => e.preventDefault(); // keep the text selection when clicking a button
+    walk(root);
+    return out
+      .replace(/\[\[[^|\]]*\|\]\]/g, '') // empty color runs
+      .replace(/\*\*\*\*/g, '')
+      .replace(/\n+$/, '');
+  }
+
+  // One listener remembers the highlight for whichever rich editor it is in.
+  document.addEventListener('selectionchange', () => {
+    const n = getSelection().anchorNode;
+    const ed = n && (n.nodeType === 1 ? n : n.parentNode).closest && (n.nodeType === 1 ? n : n.parentNode).closest('.rich-ed');
+    if (ed && ed._remember) ed._remember();
+  });
+
+  function richEditor(o, f, ch) {
+    const multi = f.t === 'textarea';
+    const ed = h('div', { class: 'rich-ed' + (multi ? ' multi' : ''), contenteditable: 'true', spellcheck: 'true', role: 'textbox', 'aria-label': f.l });
+    ed.innerHTML = markupToHtml(getp(o, f.k));
+    let saved = null;
+    const inside = (node) => node && (node === ed || ed.contains(node));
+    const remember = () => {
+      const sel = getSelection();
+      if (sel.rangeCount && inside(sel.anchorNode)) saved = sel.getRangeAt(0).cloneRange();
+    };
+    ed._remember = remember;
+    const sync = () => { setp(o, f.k, htmlToMarkup(ed)); ch(); };
+    ed.addEventListener('input', sync);
+    ed.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); if (multi) { document.execCommand('insertLineBreak'); } }
+    });
+    ed.addEventListener('paste', (e) => {
+      e.preventDefault();
+      let t = (e.clipboardData || window.clipboardData).getData('text/plain');
+      if (!multi) t = t.replace(/\s*\n\s*/g, ' ');
+      document.execCommand('insertText', false, t);
+    });
+
+    // Put the remembered selection back (buttons and the color picker steal focus).
+    const restore = () => {
+      if (!saved) return null;
+      ed.focus();
+      const sel = getSelection(); sel.removeAllRanges(); sel.addRange(saved);
+      return saved;
+    };
+    const selectNode = (node) => {
+      const r = document.createRange(); r.selectNodeContents(node);
+      const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); saved = r.cloneRange();
+    };
+    const needSel = () => { toast('Highlight some words first'); };
+
+    // Move `el` up to the top of the editor, splitting every wrapper it sits in.
+    // keep=true re-applies bold/italic/link wrappers inside it; colors never nest.
+    const liftOut = (el, keep) => {
+      while (el.parentNode && el.parentNode !== ed) {
+        const p = el.parentNode;
+        const before = p.cloneNode(false), after = p.cloneNode(false);
+        while (p.firstChild !== el) before.appendChild(p.firstChild);
+        while (el.nextSibling) after.appendChild(el.nextSibling);
+        const par = p.parentNode;
+        par.insertBefore(before, p); par.insertBefore(el, p); par.insertBefore(after, p); p.remove();
+        [before, after].forEach((x) => { if (!x.textContent) x.remove(); });
+        if (keep && el.nodeType === 1 && !(p.tagName === 'SPAN' && p.dataset.c)) {
+          const inner = p.cloneNode(false);
+          while (el.firstChild) inner.appendChild(el.firstChild);
+          el.appendChild(inner);
+        }
+      }
+    };
+    const unwrap = (root, sel) => root.querySelectorAll(sel).forEach((x) => x.replaceWith(...x.childNodes));
+
+    const paint = (c) => {
+      const r = restore();
+      if (!r || r.collapsed) return needSel();
+      const frag = r.extractContents();
+      unwrap(frag, 'span[data-c]');
+      const sp = document.createElement('span');
+      sp.dataset.c = c; sp.style.color = shownColor(c);
+      sp.append(frag);
+      r.insertNode(sp);
+      liftOut(sp, true);
+      ed.querySelectorAll('span[data-c]').forEach((x) => { if (!x.textContent) x.remove(); });
+      ed.normalize();
+      selectNode(sp); // keep the words highlighted so another color replaces this one
+      sync();
+    };
+    const cmd = (name) => { const r = restore(); if (!r || r.collapsed) return needSel(); document.execCommand('styleWithCSS', false, false); document.execCommand(name); remember(); sync(); };
+    const link = () => {
+      const r = restore(); if (!r || r.collapsed) return needSel();
+      const url = prompt('Link address', 'https://');
+      if (!url) return;
+      restore();
+      const a = document.createElement('a'); a.href = url.trim();
+      a.append(r.extractContents()); r.insertNode(a); selectNode(a); sync();
+    };
+    const clear = () => {
+      const r = restore();
+      if (!r || r.collapsed) { ed.textContent = ed.textContent; sync(); return; }
+      const t = document.createTextNode(r.toString());
+      r.deleteContents(); r.insertNode(t); liftOut(t, false);
+      unwrap(ed, 'b:empty,i:empty,strong:empty,em:empty,a:empty');
+      ed.querySelectorAll('span[data-c]').forEach((x) => { if (!x.textContent) x.remove(); });
+      selectNode(t); sync();
+    };
+
+    const keep = (e) => e.preventDefault(); // don't steal the highlight
     const btn = (label, title, fn, cls) => h('button', { type: 'button', class: 'rb ' + (cls || ''), title, onmousedown: keep, onclick: fn }, label);
-    const picker = h('input', { type: 'color', value: '#ff6600', title: 'Any color', oninput: null, onchange: (e) => color(e.target.value) });
-    return h('div', { class: 'richbar' },
-      btn(h('b', null, 'B'), 'Bold', () => wrapSel('**', '**', 'bold text')),
-      btn(h('i', null, 'I'), 'Italic', () => wrapSel('*', '*', 'italic text')),
+    const picker = h('input', { type: 'color', value: '#ff6600', onchange: (e) => paint(e.target.value) });
+    const bar = h('div', { class: 'richbar' },
+      btn('Accent', 'Theme accent color', () => paint('accent'), 'rb-accent'),
+      SWATCHES.map((c) => { const b = btn('', c, () => paint(c), 'rb-sw'); b.style.background = c; return b; }),
+      h('label', { class: 'rb rb-pick', title: 'Any color' }, '🎨', picker),
       h('span', { class: 'rb-sep' }),
-      btn('Accent', 'Color the selected words with the theme accent color', () => color('accent'), 'rb-accent'),
-      SWATCHES.map((c) => btn('', 'Color selected words ' + c, () => color(c), 'rb-sw')).map((b, i) => { b.style.background = SWATCHES[i]; return b; }),
-      h('label', { class: 'rb rb-pick', title: 'Pick any color', onmousedown: () => {} }, '🎨', picker),
-      h('span', { class: 'rb-sep' }),
-      btn('🔗', 'Make the selected words a link', () => wrapSel('[', '](https://)', 'link text')),
-      btn('Clear', 'Remove formatting from the selected words', () => {
-        const s = inp.selectionStart, e = inp.selectionEnd;
-        const all = s === e;
-        const a = all ? 0 : s, z = all ? inp.value.length : e;
-        const clean = inp.value.slice(a, z).replace(/\[\[[^|\]]*\|/g, '').replace(/\]\]/g, '').replace(/\*\*|==|\*/g, '').replace(/\[([^\]]+)\]\([^)]*\)/g, '$1');
-        inp.setRangeText(clean, a, z, 'select'); inp.focus(); inp.dispatchEvent(new Event('input'));
-      }));
+      btn(h('b', null, 'B'), 'Bold', () => cmd('bold')),
+      btn(h('i', null, 'I'), 'Italic', () => cmd('italic')),
+      btn('🔗', 'Link', link),
+      btn('Clear', 'Remove formatting from the highlighted words (or everything)', clear));
+    ed.style.setProperty('--td-accent', state.theme.accent);
+    return h('div', { class: 'rich' }, bar, ed);
   }
 
   function field(o, f, ch) {
-    let c = CTRL[f.t](o, f, ch);
-    if (f.rich) c = h('div', { class: 'rich' }, richBar(c), c);
+    const c = f.rich ? richEditor(o, f, ch) : CTRL[f.t](o, f, ch);
     if (f.t === 'checkbox') return h('div', { class: 'field' }, c, f.hint ? h('div', { class: 'hint' }, f.hint) : null);
     return h('div', { class: 'field' }, h('label', { class: 'fl' }, f.l), c, f.hint ? h('div', { class: 'hint' }, f.hint) : null);
   }

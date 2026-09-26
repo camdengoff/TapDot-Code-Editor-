@@ -28,8 +28,9 @@ It is a static page with no build step and no server:
   (for example "Chapel", Tue/Thu 10:00–11:30 CT, or a date range for a season). Pick a tab to see and
   edit that version; the eye button shows or hides a block during that time. The preview follows the tab
   you're editing, or can show what's live right now.
-- **Word colors**: text fields have a toolbar. Select words, then tap a color, Accent, bold, italic or link.
-  It writes simple markup such as `[[#ef4444|words]]`, `[[accent|words]]`, `**bold**`, `*italic*`.
+- **Word colors**: text fields show formatted text. Highlight words and tap a color (or Accent, 🎨 for
+  any color, bold, italic, link); tapping another color replaces it. Behind the scenes it is stored as
+  simple markup such as `[[#ef4444|words]]` and `**bold**`.
 - **Export**: copy or download the HTML. Options for the Squarespace fixes, full-screen vs inline layout,
   and keeping an editable copy inside the HTML so it can be reopened later.
 - Autosaves in the browser, plus Save project (`.json`), Open, undo/redo and drag-to-reorder.
