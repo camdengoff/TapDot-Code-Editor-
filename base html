@@ -1,0 +1,1401 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <title>Bethany First Church</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* ── Squarespace default overrides ── */
+        body {
+            padding-top: 0 !important;
+            margin-top: 0 !important;
+        }
+        /* ── Force flower background on Squarespace wrappers ── */
+        html, body, #siteWrapper, #site, #page, .content-wrapper,
+        .page-section, section, .Index-page-content,
+        .sqs-block-code, article, main, footer, header {
+            background: #191818 !important;
+        }
+        .sqs-block-content,
+        .sqs-layout,
+        .sqs-col-wm-12,
+        .sqs-block {
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+        /* Override Squarespace typography injection */
+        .page .hero-body,
+        .page .hero-title,
+        .page .hero-sub,
+        .page .notes-banner-text,
+        .page .notes-banner-eyebrow,
+        .page .notes-banner-title,
+        .page .notes-banner-sub,
+        .page .section-head,
+        .page .section-head h2,
+        .page .see-all,
+        .page .quick-btn,
+        .page .event-title,
+        .page .event-time,
+        .page .event-month,
+        .page .event-day,
+        .page .ministry-pill-tag,
+        .page .ministry-pill-name,
+        .page .view-all-btn,
+        .page .events-loading {
+            line-height: 1.3 !important;
+            letter-spacing: 0 !important;
+            word-spacing: 0 !important;
+        }
+        #scroll-root {
+            top: 0 !important;
+        }
+
+        /* ── Hide site-wide search bar and header on this page ── */
+        #sq-search-header-slot,
+        #sq-mobile-search-btn,
+        #sq-search-overlay { display: none !important; }
+
+        :root {
+            --bg: #000000;
+            --card: #3D3D3D;
+            --card2: #484848;
+            --white: #ffffff;
+            --muted: #999999;
+            --blue: #3b7de1;
+            --radius: 14px;
+        }
+
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #191818;
+            color: var(--white);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 15px;
+            line-height: 1.5;
+            -webkit-text-size-adjust: 100%;
+        }
+
+        #scroll-root {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            overflow-y: scroll;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: none;
+        }
+
+        .page {
+            max-width: 100%;
+            margin: 0;
+            padding-top: 20px;
+            padding-bottom: 24px;
+            background: transparent;
+        }
+
+        @media (min-width: 481px) {
+            body {
+                background: #191818;
+            }
+
+            .page {
+                max-width: 480px;
+                margin: 0 auto;
+                box-shadow: none;
+            }
+        }
+
+        .hero-card {
+            margin: 12px 14px 0;
+            border-radius: var(--radius);
+            overflow: hidden;
+            background: var(--card);
+        }
+
+        .hero-img-wrap {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 16/9;
+            overflow: hidden;
+            background: #222;
+        }
+
+        .hero-img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            opacity: 0;
+            transition: opacity 1s ease;
+        }
+
+        .hero-img.active {
+            opacity: 1;
+        }
+
+        .hero-body {
+            padding: 18px 20px 24px;
+        }
+
+        .hero-title {
+            font-size: 23px;
+            font-weight: 800;
+            line-height: 1.15;
+            margin-bottom: 4px;
+        }
+
+        .hero-title .blue {
+            color: var(--blue);
+        }
+
+        .hero-title .white {
+            color: var(--white);
+        }
+
+        .hero-sub {
+            font-size: 14px;
+            color: var(--muted);
+        }
+
+        .quick-row {
+            display: flex;
+            gap: 10px;
+            padding: 14px 14px 0;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+        }
+
+        .quick-row::-webkit-scrollbar {
+            display: none;
+        }
+
+        .quick-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 11px 16px;
+            background: var(--card);
+            border-radius: 50px;
+            color: var(--white);
+            font-size: 13px;
+            font-weight: 600;
+            white-space: nowrap;
+            flex-shrink: 0;
+            -webkit-tap-highlight-color: transparent;
+            cursor: pointer;
+            border: none;
+            text-decoration: none;
+        }
+
+        .quick-btn:active {
+            background: var(--card2);
+        }
+
+        .quick-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .ic-prayer {
+            background: rgba(251, 191, 36, 0.15);
+        }
+
+        .ic-steps {
+            background: rgba(59, 125, 225, 0.2);
+        }
+
+        .ic-serve {
+            background: rgba(16, 185, 129, 0.15);
+        }
+
+        .section-head {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            padding: 15px 14px 3px !important;
+            margin: 0 !important;
+            min-height: 0 !important;
+        }
+
+        .section-head h2 {
+            font-size: 18px !important;
+            font-weight: 700 !important;
+            line-height: 1.2 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        .see-all {
+            font-size: 13px !important;
+            color: var(--muted);
+            text-decoration: none;
+            -webkit-tap-highlight-color: transparent;
+            cursor: pointer;
+            border: none;
+            background: none;
+            margin: 0 !important;
+            padding: 0 !important;
+            line-height: 1.2 !important;
+        }
+
+        .see-all:active {
+            color: var(--white);
+        }
+
+        .notes-banner-wrap {
+            margin: 6px 14px 0;
+        }
+
+        .notes-banner {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            background: var(--card);
+            border-radius: var(--radius);
+            padding: 16px;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            border: none;
+            width: 100%;
+            color: var(--white);
+            text-decoration: none;
+        }
+
+        .notes-banner:active {
+            background: var(--card2);
+        }
+
+        .notes-banner-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: rgba(59, 125, 225, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            flex-shrink: 0;
+        }
+
+        .notes-banner-text {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .notes-banner-eyebrow {
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            color: var(--blue);
+            margin-bottom: 3px;
+        }
+
+        .notes-banner-title {
+            font-size: 15px;
+            font-weight: 700;
+            line-height: 1.3;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .notes-banner-sub {
+            font-size: 12px;
+            color: var(--muted);
+            margin-top: 2px;
+        }
+
+        .notes-banner-arrow {
+            color: var(--muted);
+            font-size: 22px;
+            flex-shrink: 0;
+        }
+
+        .ministry-scroll {
+            display: flex;
+            gap: 10px;
+            padding: 0 14px;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+        }
+
+        .ministry-scroll::-webkit-scrollbar {
+            display: none;
+        }
+
+        .ministry-pill {
+            display: flex;
+            align-items: center;
+            background: var(--card);
+            border-radius: var(--radius);
+            overflow: hidden;
+            color: var(--white);
+            flex-shrink: 0;
+            width: 195px;
+            -webkit-tap-highlight-color: transparent;
+            cursor: pointer;
+            border: none;
+            text-decoration: none;
+        }
+
+        .ministry-pill:active {
+            background: var(--card2);
+        }
+
+        .ministry-pill img {
+            width: 64px;
+            height: 64px;
+            object-fit: cover;
+            flex-shrink: 0;
+        }
+
+        .ministry-pill-info {
+            padding: 0 12px;
+            min-width: 0;
+        }
+
+        .ministry-pill-tag {
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            margin-bottom: 2px;
+        }
+
+        .ministry-pill-name {
+            font-size: 14px;
+            font-weight: 700;
+            line-height: 1.2;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .events-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+            margin: 0 14px;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+
+        .event-row {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            background: var(--card);
+            padding: 14px 16px;
+            color: var(--white);
+            -webkit-tap-highlight-color: transparent;
+            cursor: pointer;
+            border: none;
+            width: 100%;
+            text-align: left;
+            text-decoration: none;
+        }
+
+        .event-row:active {
+            background: var(--card2);
+        }
+
+        .event-date {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 36px;
+        }
+
+        .event-mo {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--blue);
+            letter-spacing: 0.05em;
+        }
+
+        .event-dy {
+            font-size: 24px;
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        .event-detail {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .event-name {
+            font-size: 14px;
+            font-weight: 600;
+            line-height: 1.3;
+            margin-bottom: 2px;
+        }
+
+        .event-meta {
+            font-size: 12px;
+            color: var(--muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .event-chev {
+            color: var(--muted);
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .events-loading {
+            margin: 0 14px;
+            padding: 20px;
+            background: var(--card);
+            border-radius: var(--radius);
+            text-align: center;
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .view-all-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 6px 14px 0;
+            padding: 14px;
+            background: var(--card);
+            border-radius: var(--radius);
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--white);
+            -webkit-tap-highlight-color: transparent;
+            cursor: pointer;
+            border: none;
+            width: calc(100% - 28px);
+            text-decoration: none;
+        }
+
+        .view-all-btn:active {
+            background: var(--card2);
+        }
+
+        /* PAGE MODAL */
+        .page-modal-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 200;
+            backdrop-filter: blur(4px);
+        }
+
+        .page-modal-backdrop.open {
+            display: block;
+        }
+
+        .page-modal-sheet {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 201;
+            background: #1a1a1a;
+            border-radius: 20px 20px 0 0;
+            height: 85vh;
+            overflow: hidden;
+            transform: translateY(100%);
+            transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+            max-width: 480px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .page-modal-sheet.open {
+            transform: translateY(0);
+        }
+
+        .page-modal-handle-bar {
+            display: flex;
+            justify-content: center;
+            padding: 8px 0 4px;
+            flex-shrink: 0;
+        }
+
+        .page-modal-handle-bar span {
+            width: 36px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 99px;
+        }
+
+        .page-modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0px 16px 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+            flex-shrink: 0;
+        }
+
+        .page-modal-header-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .page-modal-header-icon {
+            font-size: 20px;
+            line-height: 1;
+        }
+
+        .page-modal-header-text h2 {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--white);
+        }
+
+        .page-modal-header-text p {
+            font-size: 11px;
+            color: var(--blue);
+            margin-top: 0px;
+        }
+
+        .page-modal-close {
+            width: 30px;
+            height: 30px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            border: none;
+            color: var(--white);
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .page-modal-close:active {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .page-modal-body {
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .page-modal-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: #fff;
+        }
+
+        .page-modal-loader {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--blue), #60a5fa);
+            transform-origin: left;
+            animation: loadBar 1.6s ease-in-out infinite;
+            z-index: 302;
+            border-radius: 0 2px 2px 0;
+        }
+
+        @keyframes loadBar {
+            0% {
+                transform: scaleX(0);
+                opacity: 1;
+            }
+
+            70% {
+                transform: scaleX(0.85);
+                opacity: 1;
+            }
+
+            100% {
+                transform: scaleX(1);
+                opacity: 0;
+            }
+        }
+
+        /* MODAL */
+        .modal-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 200;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-backdrop.open {
+            display: block;
+        }
+
+        .modal-sheet {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 201;
+            background: #1a1a1a;
+            border-radius: 20px 20px 0 0;
+            max-height: 92vh;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            transform: translateY(100%);
+            transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+            max-width: 480px;
+            margin: 0 auto;
+        }
+
+        .modal-sheet.open {
+            transform: translateY(0);
+        }
+
+        .modal-handle-bar {
+            display: flex;
+            justify-content: center;
+            padding: 12px 0 4px;
+        }
+
+        .modal-handle-bar span {
+            width: 36px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 99px;
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 4px 20px 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+        }
+
+        .modal-header-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .modal-header-icon {
+            font-size: 24px;
+            line-height: 1;
+        }
+
+        .modal-header-text h2 {
+            font-size: 17px;
+            font-weight: 700;
+        }
+
+        .modal-header-text p {
+            font-size: 12px;
+            color: var(--muted);
+            margin-top: 1px;
+        }
+
+        .modal-close {
+            width: 30px;
+            height: 30px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            border: none;
+            color: var(--white);
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .modal-close:active {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .modal-body {
+            padding: 20px 20px 40px;
+        }
+
+        .nextsteps-item {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            background: var(--card);
+            border-radius: var(--radius);
+            padding: 18px 16px;
+            margin-bottom: 10px;
+            width: 100%;
+            border: none;
+            color: var(--white);
+            text-align: left;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .nextsteps-item:active {
+            background: var(--card2);
+        }
+
+        .nextsteps-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .nextsteps-item-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            flex-shrink: 0;
+        }
+
+        .ns-ic-1 {
+            background: rgba(59, 125, 225, 0.2);
+        }
+
+        .ns-ic-2 {
+            background: rgba(16, 185, 129, 0.2);
+        }
+
+        .ns-ic-3 {
+            background: rgba(251, 191, 36, 0.2);
+        }
+
+        .ns-ic-4 {
+            background: rgba(16, 185, 129, 0.2);
+        }
+
+        .nextsteps-item-text {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .nextsteps-item-title {
+            font-size: 16px;
+            font-weight: 700;
+            line-height: 1.2;
+            margin-bottom: 3px;
+        }
+
+        .nextsteps-item-desc {
+            font-size: 13px;
+            color: var(--muted);
+            line-height: 1.4;
+        }
+
+        .nextsteps-item-arrow {
+            color: var(--muted);
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(28px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .anim {
+            opacity: 0;
+            animation: slideUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+
+        .anim-1 { animation-delay: 0.05s; }
+        .anim-2 { animation-delay: 0.12s; }
+        .anim-3 { animation-delay: 0.19s; }
+        .anim-4 { animation-delay: 0.26s; }
+        .anim-5 { animation-delay: 0.33s; }
+        .anim-6 { animation-delay: 0.40s; }
+        .anim-7 { animation-delay: 0.47s; }
+
+        @media (prefers-reduced-motion: reduce) {
+            .anim {
+                animation: none;
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="scroll-root">
+        <div class="page">
+
+            <div class="hero-card anim anim-1">
+                <div class="hero-img-wrap" id="heroSlideshow"></div>
+                <div class="hero-body">
+                    <div class="hero-title">
+                        <span class="blue">Bethany First</span> <span class="white">Church</span>
+                    </div>
+                    <div class="hero-sub">We're glad you're here.</div>
+                </div>
+            </div>
+
+            <div class="quick-row anim anim-2">
+                <a href="#" class="quick-btn" onclick="openPage('https://bethanynaz-proxy.cgoff.workers.dev/prayer'); return false;">
+                    <span class="quick-icon ic-prayer">🙏</span>Ask for Prayer
+                </a>
+                <a href="#" class="quick-btn" onclick="openNextSteps(); return false;">
+                    <span class="quick-icon ic-steps">✚</span>Next Steps
+                </a>
+                <a href="#" class="quick-btn" onclick="openPage('https://bethanynaz.org/give'); return false;">
+                    <span class="quick-icon ic-serve">💵</span>Give
+                </a>
+            </div>
+
+            <div class="notes-banner-wrap anim anim-2">
+                <a href="#" class="notes-banner" onclick="window.location.href='http://bethanynaz.info/connect'; return false;">
+                    <div class="notes-banner-icon">👋</div>
+                    <div class="notes-banner-text">
+                        <div class="notes-banner-eyebrow">New Here?</div>
+                        <div class="notes-banner-title">Connect with Us</div>
+                        <div class="notes-banner-sub">Share your name with us and let us know you visited!</div>
+                    </div>
+                    <div class="notes-banner-arrow">›</div>
+                </a>
+            </div>
+
+            <div class="notes-banner-wrap anim anim-2">
+                <a href="#" class="notes-banner" onclick="window.location.href='https://www.bethanynaz.org/construction'; return false;">
+                    <div class="notes-banner-icon">🚧</div>
+                    <div class="notes-banner-text">
+                        <div class="notes-banner-eyebrow" style="color:var(--blue);">Campus Renewal</div>
+                        <div class="notes-banner-title">Construction In Progress</div>
+                        <div class="notes-banner-sub">Learn more about what to expect.</div>
+                    </div>
+                    <div class="notes-banner-arrow">›</div>
+                </a>
+            </div>
+
+            <div class="notes-banner-wrap anim anim-2">
+                <a href="#" class="notes-banner" onclick="window.location.href='https://tsiems.wufoo.com/forms/m4s4eo50gl8kmd/'; return false;">
+                    <div class="notes-banner-icon" style="background:rgba(59,125,225,0.2);">🤝</div>
+                    <div class="notes-banner-text">
+                        <div class="notes-banner-title">Becoming Course Sign-Up</div>
+                        <div class="notes-banner-sub">Take the next step in becoming part of the BFC community.</div>
+                    </div>
+                    <div class="notes-banner-arrow">›</div>
+                </a>
+            </div>
+
+            <div class="section-head anim anim-5">
+                <h2>Upcoming Events</h2>
+                <a href="#" class="see-all" onclick="openPage('https://bethanynaz-proxy.cgoff.workers.dev/events'); return false;">See All</a>
+            </div>
+            <div id="events-container" class="anim anim-6">
+                <div class="events-loading">Loading events…</div>
+            </div>
+            <a href="#" class="view-all-btn anim anim-7" onclick="openPage('https://bethanynaz-proxy.cgoff.workers.dev/events'); return false;">View All Events</a>
+
+            <div class="section-head anim anim-4">
+                <h2>Ministries</h2>
+                <a href="#" class="see-all" onclick="openPage('https://bethanynaz-proxy.cgoff.workers.dev/ministries-menu'); return false;">See All</a>
+            </div>
+            <div class="ministry-scroll anim anim-4">
+                <a href="#" class="ministry-pill" onclick="openPage('https://bethanynaz-proxy.cgoff.workers.dev/kids'); return false;">
+                    <img src="https://tithely-media-prod.s3.us-west-1.wasabisys.com/865937/Goff---BFC-Kids-1-7-24-29-%281%29.jpeg" alt="BFC Kids" loading="lazy" />
+                    <div class="ministry-pill-info">
+                        <div class="ministry-pill-tag">Kids</div>
+                        <div class="ministry-pill-name">BFC Kids</div>
+                    </div>
+                </a>
+                <a href="#" class="ministry-pill" onclick="openPage('https://bethanynaz-proxy.cgoff.workers.dev/preteens'); return false;">
+                    <img src="https://tithely-media-prod.s3.us-west-1.wasabisys.com/860048/2025-05-04-6.jpg" alt="Preteens" loading="lazy" />
+                    <div class="ministry-pill-info">
+                        <div class="ministry-pill-tag">Grades 5-6</div>
+                        <div class="ministry-pill-name">Preteens</div>
+                    </div>
+                </a>
+                <a href="#" class="ministry-pill" onclick="openPage('https://bethanynaz-proxy.cgoff.workers.dev/students'); return false;">
+                    <img src="https://tithely-media-prod.s3.us-west-1.wasabisys.com/1131059/2025-08-27-Catalyst-Course-4-1.jpeg" alt="Students" loading="lazy" />
+                    <div class="ministry-pill-info">
+                        <div class="ministry-pill-tag">Grades 6–12</div>
+                        <div class="ministry-pill-name">Students</div>
+                    </div>
+                </a>
+                <a href="#" class="ministry-pill" onclick="openPage('https://bethanynaz-proxy.cgoff.workers.dev/senior-adults'); return false;">
+                    <img src="https://tithely-media-prod.s3.us-west-1.wasabisys.com/1131067/2025-09-16---Ministers-Forum-141.jpg" alt="Senior Adults" loading="lazy" />
+                    <div class="ministry-pill-info">
+                        <div class="ministry-pill-tag">55+</div>
+                        <div class="ministry-pill-name">Senior Adults</div>
+                    </div>
+                </a>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- PAGE MODAL -->
+    <div class="page-modal-backdrop" id="pageModalBackdrop" onclick="closePage()"></div>
+    <div class="page-modal-sheet" id="pageModalSheet">
+        <div class="page-modal-loader" id="pageModalLoader"></div>
+        <div class="page-modal-handle-bar"><span></span></div>
+        <div class="page-modal-header">
+            <div class="page-modal-header-left">
+                <div class="page-modal-header-icon" id="pageModalIcon">🔗</div>
+                <div class="page-modal-header-text">
+                    <h2 id="pageModalTitle">Loading…</h2>
+                    <p id="pageModalUrl" style="display:none;"></p>
+                </div>
+            </div>
+            <button class="page-modal-close" onclick="closePage()">✕</button>
+        </div>
+        <div class="page-modal-body">
+            <iframe class="page-modal-iframe" id="pageModalFrame" src="about:blank"></iframe>
+        </div>
+    </div>
+
+    <!-- EVENT DETAIL MODAL -->
+    <div class="modal-backdrop" id="eventDetailBackdrop" onclick="closeEventDetail()"></div>
+    <div class="modal-sheet" id="eventDetailSheet">
+        <div class="modal-handle-bar"><span></span></div>
+        <div class="modal-header">
+            <div class="modal-header-left">
+                <div class="modal-header-icon">📅</div>
+                <div class="modal-header-text">
+                    <h2 id="eventDetailTitle">Event</h2>
+                    <p id="eventDetailDate" style="color:var(--blue);font-size:12px;margin-top:1px;"></p>
+                </div>
+            </div>
+            <button class="modal-close" onclick="closeEventDetail()">✕</button>
+        </div>
+        <div class="modal-body" id="eventDetailBody"></div>
+    </div>
+
+    <!-- NEXT STEPS MODAL -->
+    <div class="modal-backdrop" id="nextStepsBackdrop" onclick="closeNextSteps()"></div>
+    <div class="modal-sheet" id="nextStepsSheet">
+        <div class="modal-handle-bar"><span></span></div>
+        <div class="modal-header">
+            <div class="modal-header-left">
+                <div class="modal-header-icon">✚</div>
+                <div class="modal-header-text">
+                    <h2>Next Steps</h2>
+                    <p>Grow in your faith journey.</p>
+                </div>
+            </div>
+            <button class="modal-close" onclick="closeNextSteps()">✕</button>
+        </div>
+        <div class="modal-body">
+            <a href="#" class="nextsteps-item" onclick="closeNextSteps(); openPage('https://bethanynaz-proxy.cgoff.workers.dev/next-steps'); return false;">
+                <div class="nextsteps-item-icon ns-ic-1">📖</div>
+                <div class="nextsteps-item-text">
+                    <div class="nextsteps-item-title">Discipleship Courses</div>
+                    <div class="nextsteps-item-desc">Short, weekly courses to help you follow Jesus and grow intentionally.</div>
+                </div>
+                <div class="nextsteps-item-arrow">›</div>
+            </a>
+            <a href="#" class="nextsteps-item" onclick="closeNextSteps(); openPage('https://bethanynaz-proxy.cgoff.workers.dev/baptism'); return false;">
+                <div class="nextsteps-item-icon ns-ic-2">💧</div>
+                <div class="nextsteps-item-text">
+                    <div class="nextsteps-item-title">Baptism</div>
+                    <div class="nextsteps-item-desc">Take the next step and make your faith public through baptism.</div>
+                </div>
+                <div class="nextsteps-item-arrow">›</div>
+            </a>
+            <a href="#" class="nextsteps-item" onclick="closeNextSteps(); openPage('https://bethanynaz-proxy.cgoff.workers.dev/group-life'); return false;">
+                <div class="nextsteps-item-icon ns-ic-3">👥</div>
+                <div class="nextsteps-item-text">
+                    <div class="nextsteps-item-title">Group Life</div>
+                    <div class="nextsteps-item-desc">Do life with others in a Community Group that fits your season.</div>
+                </div>
+                <div class="nextsteps-item-arrow">›</div>
+            </a>
+            <a href="#" class="nextsteps-item" onclick="closeNextSteps(); openPage('https://tithelymedia.blob.core.windows.net/app-pages/41204/pg-117732.html'); return false;">
+                <div class="nextsteps-item-icon ns-ic-4">🤝</div>
+                <div class="nextsteps-item-text">
+                    <div class="nextsteps-item-title">Serve</div>
+                    <div class="nextsteps-item-desc">Be part of what God is doing by serving others with your gifts.</div>
+                </div>
+                <div class="nextsteps-item-arrow">›</div>
+            </a>
+        </div>
+    </div>
+
+    <script>
+        // ── PAGE TITLE MAP ───────────────────────────────────────────────────
+        const pageTitles = {
+            'bethanynaz-proxy.cgoff.workers.dev/next-steps': { title: 'Discipleship Courses', icon: '📖' },
+            'bethanynaz-proxy.cgoff.workers.dev/baptism': { title: 'Baptism', icon: '💧' },
+            'bethanynaz-proxy.cgoff.workers.dev/group-life': { title: 'Group Life', icon: '🤝' },
+            'bethanynaz-proxy.cgoff.workers.dev/serve': { title: 'Serve', icon: '🤝' },
+            'tithelymedia.blob.core.windows.net/app-pages/41204/pg-117732.html': { title: 'Serve', icon: '🤝' },
+            'tithelymedia.blob.core.windows.net/app-pages/41204/pg-117779.html': { title: 'Community Groups', icon: '🤝' },
+            'bethanynaz-proxy.cgoff.workers.dev/prayer': { title: 'Prayer', icon: '🙏' },
+            'bethanynaz-proxy.cgoff.workers.dev/kids': { title: 'BFC Kids', icon: '👶' },
+            'bethanynaz-proxy.cgoff.workers.dev/preteens': { title: 'Preteens', icon: '🎮' },
+            'bethanynaz-proxy.cgoff.workers.dev/students': { title: 'Students', icon: '📚' },
+            'bethanynaz-proxy.cgoff.workers.dev/senior-adults': { title: 'Senior Adults', icon: '👴' },
+            'control.resi.io': { title: 'Watch Message', icon: '▶️' },
+            'bethanynaz-live.cgoff.workers.dev': { title: 'Watch Online', icon: '▶️' },
+            'bethanynaz-proxy.cgoff.workers.dev': { title: 'Event Details', icon: '📅' },
+            'bethanynaz.org/upcoming-source-page': { title: 'Event Details', icon: '📅' },
+            'bethanynaz.org': { title: 'Bethany First Church', icon: '⛪' },
+        };
+
+        function getPageMeta(url) {
+            for (const [key, val] of Object.entries(pageTitles)) {
+                if (url.includes(key)) return val;
+            }
+            try {
+                return { title: new URL(url).hostname.replace('www.', ''), icon: '🔗' };
+            } catch {
+                return { title: url, icon: '🔗' };
+            }
+        }
+
+        // ── PAGE MODAL ───────────────────────────────────────────────────────
+        function openPage(url) {
+            const frame = document.getElementById('pageModalFrame');
+            const loader = document.getElementById('pageModalLoader');
+            const sheet = document.getElementById('pageModalSheet');
+            const backdrop = document.getElementById('pageModalBackdrop');
+            const meta = getPageMeta(url);
+            document.getElementById('pageModalTitle').textContent = meta.title;
+            document.getElementById('pageModalIcon').textContent = meta.icon;
+            try {
+                document.getElementById('pageModalUrl').textContent = new URL(url).hostname.replace('www.', '');
+            } catch {
+                document.getElementById('pageModalUrl').textContent = url;
+            }
+            loader.style.display = 'block';
+            backdrop.classList.add('open');
+            sheet.classList.add('open');
+            document.getElementById('scroll-root').style.overflow = 'hidden';
+            frame.onload = () => { loader.style.display = 'none'; };
+            frame.src = url;
+        }
+
+        function closePage() {
+            const frame = document.getElementById('pageModalFrame');
+            const sheet = document.getElementById('pageModalSheet');
+            const backdrop = document.getElementById('pageModalBackdrop');
+            sheet.classList.remove('open');
+            backdrop.classList.remove('open');
+            document.getElementById('scroll-root').style.overflow = 'scroll';
+            setTimeout(() => { frame.src = 'about:blank'; }, 400);
+        }
+
+        // ── NEXT STEPS MODAL ─────────────────────────────────────────────────
+        function openNextSteps() {
+            document.getElementById('nextStepsBackdrop').classList.add('open');
+            document.getElementById('nextStepsSheet').classList.add('open');
+            document.getElementById('scroll-root').style.overflow = 'hidden';
+        }
+
+        function closeNextSteps() {
+            document.getElementById('nextStepsBackdrop').classList.remove('open');
+            document.getElementById('nextStepsSheet').classList.remove('open');
+            document.getElementById('scroll-root').style.overflow = 'scroll';
+        }
+
+        // ── EVENT DETAIL MODAL ───────────────────────────────────────────────
+        function openEventDetail(ev) {
+            document.getElementById('eventDetailTitle').textContent = ev.title;
+            const opts = { weekday: 'long', month: 'long', day: 'numeric', timeZone: 'America/Chicago' };
+            const timeOpts = { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'America/Chicago' };
+            let dateStr = ev.date ? ev.date.toLocaleString('en-US', opts) : '';
+            if (ev.date) dateStr += ' · ' + ev.date.toLocaleString('en-US', timeOpts);
+            document.getElementById('eventDetailDate').textContent = dateStr;
+            const bodyEl = document.getElementById('eventDetailBody');
+            bodyEl.innerHTML = '';
+            if (ev.assetUrl) {
+                const img = document.createElement('img');
+                img.src = ev.assetUrl + '?format=1000w';
+                img.style.cssText = 'width:100%;border-radius:12px;margin-bottom:16px;display:block;';
+                bodyEl.appendChild(img);
+            }
+            if (ev.body) {
+                const wrapper = document.createElement('div');
+                wrapper.style.cssText = 'color:#fff;font-size:14px;line-height:1.6;';
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(ev.body, 'text/html');
+                doc.querySelectorAll('p, li, h1, h2, h3').forEach(node => {
+                    const p = document.createElement('p');
+                    p.style.cssText = 'margin-bottom:10px;color:#ccc;';
+                    p.innerHTML = node.innerHTML;
+                    wrapper.appendChild(p);
+                });
+                const buttons = doc.querySelectorAll('a.sqs-block-button-element');
+                if (buttons.length) {
+                    const btnRow = document.createElement('div');
+                    btnRow.style.cssText = 'margin-top:20px;display:flex;flex-direction:column;gap:10px;';
+                    buttons.forEach(btn => {
+                        const a = document.createElement('a');
+                        a.href = btn.href;
+                        a.target = '_blank';
+                        a.textContent = btn.textContent.trim();
+                        a.style.cssText = 'display:block;background:var(--blue);color:#fff;text-align:center;padding:14px;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none;';
+                        a.onclick = (e) => { e.preventDefault(); window.open(btn.href, '_blank'); };
+                        btnRow.appendChild(a);
+                    });
+                    wrapper.appendChild(btnRow);
+                }
+                bodyEl.appendChild(wrapper);
+            }
+            document.getElementById('eventDetailBackdrop').classList.add('open');
+            document.getElementById('eventDetailSheet').classList.add('open');
+            document.getElementById('scroll-root').style.overflow = 'hidden';
+        }
+
+        function closeEventDetail() {
+            document.getElementById('eventDetailBackdrop').classList.remove('open');
+            document.getElementById('eventDetailSheet').classList.remove('open');
+            document.getElementById('scroll-root').style.overflow = 'scroll';
+        }
+
+        // ── RECURRENCE HELPERS ───────────────────────────────────────────────
+        function detectIntervalDays(bodyHtml) {
+            if (!bodyHtml) return null;
+            const text = bodyHtml.replace(/<[^>]+>/g, ' ').toLowerCase();
+            if (/every other week|bi-?weekly|biweekly/.test(text)) return 14;
+            if (/every week|weekly|each week|every sunday|every monday|every tuesday|every wednesday|every thursday|every friday|every saturday/.test(text)) return 7;
+            return null;
+        }
+
+        function getNextOccurrence(startDate, endDate, intervalDays) {
+            const startCT = new Date(startDate.toLocaleString('en-US', { timeZone: 'America/Chicago' }));
+            const hours   = startCT.getHours();
+            const minutes = startCT.getMinutes();
+            const todayStr = new Date().toLocaleDateString('en-US', { timeZone: 'America/Chicago' });
+            const today = new Date(todayStr + ' 00:00:00');
+            let cursor = new Date(startDate);
+            while (cursor <= endDate) {
+                const cursorCT = new Date(cursor.toLocaleString('en-US', { timeZone: 'America/Chicago' }));
+                cursorCT.setHours(hours, minutes, 0, 0);
+                if (cursorCT >= today) return cursorCT;
+                cursor = new Date(cursor.getTime() + intervalDays * 86400000);
+            }
+            return null;
+        }
+
+        // ── EVENTS LOADING ───────────────────────────────────────────────────
+        const MAX_EVENTS = 3;
+        const JSON_URL = 'https://www.bethanynaz.org/upcoming-source-page?format=json';
+
+        async function loadEvents() {
+            const container = document.getElementById('events-container');
+            try {
+                let data = null;
+
+                // Try direct fetch first (works when page is same-site)
+                try {
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 7000);
+                    const res = await fetch(JSON_URL, { signal: controller.signal });
+                    clearTimeout(timeoutId);
+                    if (res.ok) data = await res.json();
+                } catch (e) { /* fall through to proxies */ }
+
+                // Proxy fallbacks
+                if (!data) {
+                    const proxies = [
+                        `https://api.allorigins.win/get?url=${encodeURIComponent(JSON_URL)}`,
+                        `https://corsproxy.io/?${encodeURIComponent(JSON_URL)}`,
+                        `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(JSON_URL)}`,
+                        `https://thingproxy.freeboard.io/fetch/${JSON_URL}`,
+                        `https://yacdn.org/proxy/${JSON_URL}`
+                    ];
+                    for (const proxyUrl of proxies) {
+                        try {
+                            const controller = new AbortController();
+                            const timeoutId = setTimeout(() => controller.abort(), 7000);
+                            const res = await fetch(proxyUrl, { signal: controller.signal });
+                            clearTimeout(timeoutId);
+                            if (res.ok) {
+                                const json = await res.json();
+                                data = json.contents ? JSON.parse(json.contents) : json;
+                                if (data && (data.upcoming || data.items)) break;
+                                data = null;
+                            }
+                        } catch (e) { continue; }
+                    }
+                }
+                if (!data) throw new Error('All proxies failed');
+                const items = data.upcoming || [];
+                if (items.length === 0) throw new Error('No upcoming events');
+
+                const tz = 'America/Chicago';
+                const events = [];
+
+                for (const item of items) {
+                    const title = item.title || 'Event';
+                    const startDate = new Date(item.startDate);
+                    const endDate = item.endDate ? new Date(item.endDate) : null;
+                    const isRecurring = endDate && (endDate - startDate) > 7 * 86400000;
+                    let displayDate = startDate;
+
+                    if (isRecurring) {
+                        const intervalDays = detectIntervalDays(item.body || '') || 7;
+                        const next = getNextOccurrence(startDate, endDate, intervalDays);
+                        if (!next) continue;
+                        displayDate = next;
+                    } else {
+                        const now = new Date();
+                        const expiry = endDate || startDate;
+                        if (expiry < now) continue;
+                    }
+
+                    const month = isNaN(displayDate) ? '' : displayDate.toLocaleString('en-US', { month: 'short', timeZone: tz });
+                    const day   = isNaN(displayDate) ? '' : displayDate.toLocaleString('en-US', { day: 'numeric', timeZone: tz });
+                    const meta  = isNaN(displayDate) ? '' : displayDate.toLocaleString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: tz });
+
+                    events.push({ title, month, day, meta, date: displayDate, endDate, assetUrl: item.assetUrl, body: item.body });
+                    if (events.length >= MAX_EVENTS) break;
+                }
+
+                if (events.length === 0) throw new Error('No current events');
+                renderEvents(container, events);
+            } catch (e) {
+                console.error('[Events] Failed:', e);
+                container.innerHTML = '<div class="events-loading">Could not load upcoming events.</div>';
+            }
+        }
+
+        function renderEvents(container, events) {
+            const list = document.createElement('div');
+            list.className = 'events-list';
+            events.forEach(ev => {
+                const row = document.createElement('a');
+                row.className = 'event-row';
+                row.href = '#';
+                row.onclick = (e) => { e.preventDefault(); openEventDetail(ev); };
+                row.innerHTML = `
+                    <div class="event-date">
+                        <span class="event-mo">${ev.month}</span>
+                        <span class="event-dy">${ev.day}</span>
+                    </div>
+                    <div class="event-detail">
+                        <div class="event-name">${ev.title}</div>
+                        <div class="event-meta">${ev.meta}</div>
+                    </div>
+                    <div class="event-chev">›</div>`;
+                list.appendChild(row);
+            });
+            container.innerHTML = '';
+            container.appendChild(list);
+        }
+
+        // ── CHAPEL TIME SWAP ───────────────────────────────────────────────
+        // Tuesdays (2) and Thursdays (4), 10:00 AM – 11:30 AM Central Time
+        // Swaps the banner AND starts the photo slideshow
+        (function () {
+            const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Chicago' }));
+            const day = now.getDay();            // 0=Sun … 6=Sat
+            const hours = now.getHours();
+            const minutes = now.getMinutes();
+            const time = hours * 60 + minutes;   // minutes since midnight
+
+            const isTueOrThu = (day === 2 || day === 4);
+            const isDuringChapel = (time >= 600 && time < 690); // 10:00–11:30
+
+            // ⚠️ TEST OVERRIDE — set to true to force chapel mode, remove when done
+            const testMode = false;
+
+            const wrap = document.getElementById('heroSlideshow');
+
+            if (testMode || (isTueOrThu && isDuringChapel)) {
+                // ── Swap the banner ──
+                const banner = document.querySelector('.notes-banner');
+                if (banner) {
+                    banner.setAttribute('onclick', "window.location.href='https://bethanynaz.org/college'; return false;");
+                    banner.innerHTML = `
+                        <div class="notes-banner-text">
+                            <div class="notes-banner-title">Welcome, College Students!</div>
+                            <div class="notes-banner-sub">Learn more about BFC College</div>
+                        </div>
+                        <div class="notes-banner-arrow">›</div>`;
+                }
+
+                // ── Start the photo slideshow ──
+                const photos = [
+                    'https://photos.smugmug.com/College/Tap-Tag-Photo-folder/i-xn8PcQP/0/NFCgzMC5pjxggWvsZCq8B9GDRsmdH3DMzpMsTtRxB/XL/2025%2011%2012-20-XL.png',
+                    'https://photos.smugmug.com/College/Tap-Tag-Photo-folder/i-VWLrSqS/0/KVDB34cSTSKLv68bwP6jCGJZkGxR9MZM4Jkhk7r2B/XL/2025%2011%2012-8-XL.png',
+                    'https://photos.smugmug.com/College/Tap-Tag-Photo-folder/i-JPMQDR6/0/KRKRpCSwC92BZ7JRcTg74cqj4NRGW5zbKvJJk7pMs/XL/GOFF%20-%202025%2008%2027%20Late%20Night%20-11-XL.jpg',
+                    'https://photos.smugmug.com/College/Tap-Tag-Photo-folder/i-rkm5mkx/0/LnmMHkrm8zpRwQBPFCkgT6d48hLcTGcxqHsP2TfDs/XL/GOFF%20-%202025%2008%2027%20Late%20Night%20-23-XL.jpg',
+                    'https://photos.smugmug.com/College/Tap-Tag-Photo-folder/i-9DGtSSd/0/L2xFpvwBmMVgSmBzPCHM5RtfxHhfxWdKmGmnQGRTb/XL/GOFF%20-%202025%2008%2027%20Late%20Night%20-38-XL.jpg',
+                    'https://photos.smugmug.com/College/Tap-Tag-Photo-folder/i-BQjSf37/0/MnvC2bdRRQDH6kMtNwCVqPLmj53mdktP4SC37xm4Q/XL/GOFF%20-%202025%2008%2027%20Late%20Night%20-51-XL.jpg',
+                    'https://photos.smugmug.com/College/Tap-Tag-Photo-folder/i-4kp5cZf/0/LXcWTdHX5mBhQDdvRxdHP936CmQhtzvt3KmzwBkGw/XL/GOFF%20-%202025%2008%2027%20Late%20Night%20-52-XL.jpg',
+                    'https://photos.smugmug.com/College/Tap-Tag-Photo-folder/i-qw3rZzw/0/KKctmfZMnCWLcD2Wtrj6H9Khs7jqhJxfbd4GhGJ6r/XL/2025%2001%2007%20-%20College-42-XL.jpg'
+                ];
+
+                const imgEls = [];
+                photos.forEach((url, i) => {
+                    const img = new Image();
+                    img.src = url;
+                    img.className = 'hero-img' + (i === 0 ? ' active' : '');
+                    img.alt = 'Bethany First Church';
+                    wrap.appendChild(img);
+                    imgEls.push(img);
+                });
+
+                let current = 0;
+                setInterval(() => {
+                    imgEls[current].classList.remove('active');
+                    current = (current + 1) % imgEls.length;
+                    imgEls[current].classList.add('active');
+                }, 7000);
+
+            } else {
+                // ── Outside chapel time: show the original image ──
+                const img = new Image();
+                img.src = 'https://tithely-media-prod.s3.us-west-1.wasabisys.com/1153934/header.jpeg';
+                img.className = 'hero-img active';
+                img.alt = 'Bethany First Church';
+                wrap.appendChild(img);
+            }
+        })();
+
+        // ── INIT ─────────────────────────────────────────────────────────────
+        loadEvents();
+
+        document.addEventListener('touchmove', function() {}, { passive: true });
+    </script>
+</body>
+
+</html>
