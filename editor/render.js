@@ -57,6 +57,8 @@
       case 'popup': {
         const u = safeUrl(a.url);
         if (!u) return { attrs: ' role="button"', live: false };
+        // No proxy worker set: many sites refuse to load in a pop-up, so open a new tab instead.
+        if (!String(ctx.proxy || '').trim()) return { attrs: ' href="' + esc(u) + '" target="_blank" rel="noopener"', live: true };
         ctx.usesPage = true;
         return { attrs: ' href="' + esc(proxied(u, a, ctx)) + '"' + d('act', 'popup') + d('title', a.title || '') + d('icon', a.icon || '🔗'), live: true };
       }

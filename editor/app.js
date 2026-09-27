@@ -389,7 +389,7 @@
         const opts = TD.ACTIONS.filter(([v]) => !(f.noSheet && v === 'sheet'));
         const fields = {
           link: [{ k: 'url', t: 'text', l: 'Link', ph: 'https://…' }, { k: 'newTab', t: 'checkbox', l: 'Open in a new tab' }],
-          popup: [{ k: 'url', t: 'text', l: 'Page link', ph: 'https://…', hint: state.exp.proxy ? 'Paste the normal link. It goes through your pop-up proxy automatically.' : 'Some sites refuse to load inside a pop-up. Set a pop-up proxy in the Export tab so plain links just work.' },
+          popup: [{ k: 'url', t: 'text', l: 'Page link', ph: 'https://…', hint: state.exp.proxy ? 'Paste the normal link. It goes through your pop-up proxy automatically.' : 'No pop-up proxy is set in the Export tab, so this link opens in a new tab.' },
             { k: 'direct', t: 'checkbox', l: 'Skip the pop-up proxy for this link', when: () => !!state.exp.proxy },
             { k: 'title', t: 'text', l: 'Pop-up title' }, { k: 'icon', t: 'emoji', l: 'Pop-up icon' }],
           sheet: [{ k: 'sheet', t: 'select', l: 'Menu', opts: [['', '— choose —']].concat(state.sheets.map((s) => [s.id, TD.iconLabel(s.icon) + s.title])) }],
@@ -811,7 +811,7 @@
       h('div', { class: 'field' }, h('label', { class: 'fl' }, 'Worker address'),
         h('input', { type: 'url', value: e.proxy || '', placeholder: TD.DEFAULT_PROXY, oninput: (ev) => { e.proxy = ev.target.value.trim(); e.proxyOff = !e.proxy; changed(); } }),
         e.proxy === TD.DEFAULT_PROXY ? null : h('button', { class: 'ghost', onclick: () => { e.proxy = TD.DEFAULT_PROXY; e.proxyOff = false; changed(true); } }, 'Use the BFC worker'),
-        h('div', { class: 'hint' }, 'Every “Open page in pop-up sheet” link goes through this worker so sites that block framing still load. It defaults to the BFC worker; change it to use another one, or clear it to use links exactly as typed.')),
+        h('div', { class: 'hint' }, 'Every “Open page in pop-up sheet” link goes through this worker so sites that block framing still load. It defaults to the BFC worker; change it to use another one. If it is blank, pop-up links open in a new tab instead.')),
       h('h3', null, 'Export options'),
       opt('squarespace', 'Squarespace code block fixes', 'Forces the page background onto Squarespace wrappers, removes their padding and hides the site search bar, like base html does.'),
       h('div', { class: 'field' }, h('label', { class: 'fl' }, 'Layout'),

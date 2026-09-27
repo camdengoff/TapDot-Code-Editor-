@@ -55,7 +55,7 @@ removes those headers, and hands it back so the pop-up can show it.
 3. Edit `ALLOWED_HOSTS` at the top to list the sites you want to show in pop-ups. Only those sites are
    proxied, so strangers can't use your worker as an open proxy.
 4. The editor already uses the BFC worker (`https://bethanynaz-proxy.cgoff.workers.dev`). To use a different one,
-   change **Export → Pop-up proxy → Worker address**; clear it to turn the proxy off.
+   change **Export → Pop-up proxy → Worker address**; if it is blank, pop-up links open in a new tab instead.
 
 After that, paste normal links into pop-up buttons and they go through the worker automatically.
 Old-style links such as `https://<worker>/prayer` still map to `https://bethanynaz.org/prayer`.
