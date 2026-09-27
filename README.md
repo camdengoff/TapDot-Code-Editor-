@@ -11,6 +11,29 @@ It is a static page with no build step and no server:
 - Turn on GitHub Pages for this repo (Settings → Pages → deploy from the default branch, root folder)
   and use the Pages URL.
 
+## Put the editor on a Squarespace page
+
+`dist/tapdot-editor.js` is the whole editor in one file. It draws itself in a frame so the site's styles
+can't change how it looks, and projects autosave in the browser like the normal editor.
+
+1. Download `dist/tapdot-editor.js` from this repo.
+2. Upload it to Squarespace's files: edit any text block, highlight a word, click the link button, choose
+   File, and upload it. Squarespace hosts it at `/s/tapdot-editor.js` (you can remove the link afterwards;
+   the file stays).
+3. On the page where you want the editor, add a Code block with:
+
+   ```html
+   <div id="tapdot-editor"></div>
+   <script src="/s/tapdot-editor.js"></script>
+   ```
+
+   Optional: set the height with `<div id="tapdot-editor" data-height="800px"></div>`.
+
+Code blocks only run scripts on Squarespace plans that allow JavaScript. After the editor changes, run
+`node tools/build.js` and upload the new file again. To skip re-uploading, point the script at
+`https://cdn.jsdelivr.net/gh/camdengoff/TapDot-Code-Editor-@main/dist/tapdot-editor.js` instead, which
+follows this repo automatically (it can take up to a day to refresh).
+
 ## What it does
 
 - **Blocks**: hero image or fading slideshow, section heading with "See all" link, text, buttons
@@ -42,6 +65,7 @@ It is a static page with no build step and no server:
 - `editor/render.js`: turns a project into the exported HTML (including the small runtime script)
 - `editor/app.js`: editor UI
 - `editor/styles.css`: editor styles
+- `tools/build.js`: builds `dist/tapdot-editor.js`, the single-file version for Squarespace
 - `base html`: the original hand-written page the "Bethany tap page" template recreates
 
 ## Pop-up proxy (for sites that won't open in a pop-up)
