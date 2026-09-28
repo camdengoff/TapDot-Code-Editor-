@@ -34,6 +34,30 @@ Code blocks only run scripts on Squarespace plans that allow JavaScript. After t
 `https://cdn.jsdelivr.net/gh/camdengoff/TapDot-Code-Editor-@main/dist/tapdot-editor.js` instead, which
 follows this repo automatically (it can take up to a day to refresh).
 
+## Auto-update a Squarespace page (Publish)
+
+Instead of pasting new HTML each time, publish the page to the worker and paste a small code block once.
+The code block always loads the latest published version.
+
+One-time setup in Cloudflare (on the same worker as the pop-up proxy):
+
+1. Paste the latest `worker/popup-proxy.js` into the worker and deploy.
+2. Storage & Databases → KV → Create a namespace (any name, e.g. `tapdot-pages`).
+3. Open the worker → Settings → Bindings → Add → KV namespace. Variable name `PAGES`, pick the namespace.
+4. Worker → Settings → Variables and Secrets → Add → type Secret, name `PUBLISH_KEY`, value a long
+   password only you know. Deploy.
+
+In the editor, open Export → Publish to your site:
+
+1. Pick a page name (each name is a separate page) and enter the publish key. The key is saved only in
+   that browser, never in projects or exports.
+2. Click **Publish**, then **Copy code block** and paste it into a Code block on the Squarespace page. You
+   only paste it once.
+3. From then on, click **Publish** after edits; the site page shows the new version on the next load
+   (Cloudflare can take up to a minute to catch up everywhere).
+
+The worker used is the one in the Pop-up proxy box (the BFC worker by default).
+
 ## What it does
 
 - **Blocks**: hero image or fading slideshow, section heading with "See all" link, text, buttons

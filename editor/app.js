@@ -812,6 +812,7 @@
         h('input', { type: 'url', value: e.proxy || '', placeholder: TD.DEFAULT_PROXY, oninput: (ev) => { e.proxy = ev.target.value.trim(); e.proxyOff = !e.proxy; changed(); } }),
         e.proxy === TD.DEFAULT_PROXY ? null : h('button', { class: 'ghost', onclick: () => { e.proxy = TD.DEFAULT_PROXY; e.proxyOff = false; changed(true); } }, 'Use the BFC worker'),
         h('div', { class: 'hint' }, 'Every “Open page in pop-up sheet” link goes through this worker so sites that block framing still load. It defaults to the BFC worker; change it to use another one. If it is blank, pop-up links open in a new tab instead.')),
+      publishSection(),
       h('h3', null, 'Export options'),
       opt('squarespace', 'Squarespace code block fixes', 'Forces the page background onto Squarespace wrappers, removes their padding and hides the site search bar, like base html does.'),
       h('div', { class: 'field' }, h('label', { class: 'fl' }, 'Layout'),
@@ -832,6 +833,73 @@
     setTimeout(drawExportCode, 0);
     return wrap;
   }
+  // ── Publish to the site through the worker ───────────────────────────
+  // The page is saved on the worker; a code block on the site always loads the latest version.
+  // The publish key stays in this browser and is never saved into projects or exports.
+  const PUBKEY = 'tapdot-publish-key';
+  const pubWorker = () => (state.exp.proxy || TD.DEFAULT_PROXY).replace(/\/+$/, '');
+  const pubName = () => (state.exp.pubName || slug()).toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'page';
+  const pubUrl = () => pubWorker() + '/_tapdot/page/' + pubName();
+  const getKey = () => { try { return localStorage.getItem(PUBKEY) || ''; } catch (e) { return ''; } };
+  function loaderCode() {
+    return '<div id="tapdot-live" data-src="' + pubUrl() + '"></div>\n<script>\n' +
+      '(function () {\n' +
+      '  var el = document.getElementById("tapdot-live");\n' +
+      '  fetch(el.getAttribute("data-src"), { cache: "no-cache" })\n' +
+      '    .then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); })\n' +
+      '    .then(function (html) {\n' +
+      '      el.innerHTML = html;\n' +
+      '      el.querySelectorAll("script").forEach(function (old) {\n' +
+      '        var s = document.createElement("script");\n' +
+      '        for (var i = 0; i < old.attributes.length; i++) s.setAttribute(old.attributes[i].name, old.attributes[i].value);\n' +
+      '        s.textContent = old.textContent;\n' +
+      '        old.replaceWith(s);\n' +
+      '      });\n' +
+      '    })\n' +
+      '    .catch(function () { el.textContent = "This page could not load. Please refresh."; });\n' +
+      '})();\n</' + 'script>';
+  }
+  function publishHtml() {
+    // Always the lightweight fragment form: the site page supplies <html>/<head>/<body>.
+    return TD.render(Object.assign({}, state, { exp: Object.assign({}, state.exp, { fullDoc: false }) }), {});
+  }
+  async function publish(btn) {
+    const key = getKey();
+    if (!key) { toast('Enter the publish key first'); return; }
+    btn.disabled = true; btn.textContent = 'Publishing…';
+    try {
+      const r = await fetch(pubUrl(), { method: 'POST', headers: { Authorization: 'Bearer ' + key, 'Content-Type': 'text/html; charset=utf-8' }, body: publishHtml() });
+      const msg = await r.text();
+      if (!r.ok) throw new Error(msg || ('Error ' + r.status));
+      state.exp.pubAt = new Date().toISOString(); save();
+      toast('Published. The site page shows it on the next load.');
+    } catch (e) {
+      toast('Publish failed: ' + (e.message || 'could not reach the worker'));
+    }
+    btn.disabled = false; btn.textContent = '🚀 Publish';
+    if (tab === 'export') drawPanel();
+  }
+  function publishSection() {
+    const e = state.exp;
+    const btn = h('button', { class: 'primary', onclick: () => publish(btn) }, '🚀 Publish');
+    return h('div', null,
+      h('h3', null, 'Publish to your site'),
+      h('p', { class: 'hint' }, 'Publish saves this page on your worker. A code block on your Squarespace page always shows the latest published version, so you only paste the code block once.'),
+      h('div', { class: 'field' }, h('label', { class: 'fl' }, 'Page name'),
+        h('input', { type: 'text', value: e.pubName || '', placeholder: slug(), oninput: (ev) => { e.pubName = ev.target.value.trim(); changed(); } }),
+        h('div', { class: 'hint' }, 'Each page name is a separate page on your site. Use a new name for a different tap page.')),
+      h('div', { class: 'field' }, h('label', { class: 'fl' }, 'Publish key'),
+        h('input', { type: 'password', value: getKey(), placeholder: 'The PUBLISH_KEY secret on your worker', autocomplete: 'off', oninput: (ev) => { try { localStorage.setItem(PUBKEY, ev.target.value.trim()); } catch (x) { /* ignore */ } } }),
+        h('div', { class: 'hint' }, 'Saved only in this browser. It is never included in projects or exports.')),
+      h('div', { class: 'tabhead' }, btn,
+        h('button', { class: 'ghost', onclick: async () => {
+          const code = loaderCode();
+          try { await navigator.clipboard.writeText(code); toast('Code block copied. Paste it into a Squarespace code block once.'); }
+          catch (x) { download('tapdot-code-block.html', code, 'text/html'); }
+        } }, '📋 Copy code block')),
+      e.pubAt ? h('div', { class: 'hint' }, 'Last published ' + new Date(e.pubAt).toLocaleString() + ' as “' + pubName() + '”.') : null);
+  }
+
   async function copyExport() {
     const html = exportHtml();
     try { await navigator.clipboard.writeText(html); }
