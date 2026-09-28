@@ -257,3 +257,14 @@ button.chip { padding: 0; cursor: pointer; }
 .icon-thumb { width: 38px; height: 38px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .icon-thumb img { width: 26px; height: 26px; object-fit: contain; }
 .emoji { flex-wrap: wrap; align-items: center; }
+
+/* version history */
+.verlist { padding: 0 16px 16px; overflow: auto; }
+.verlist .pad { margin: 10px 0 6px; }
+.vernew { display: flex; gap: 8px; margin-top: 14px; }
+.vernew input { flex: 1; min-width: 0; }
+.verrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.verrow:last-child { border-bottom: 0; }
+.vermeta { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.vermeta span { color: var(--muted); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.veracts { display: flex; gap: 6px; flex-shrink: 0; align-items: center; }

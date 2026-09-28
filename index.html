@@ -14,6 +14,7 @@
       <button id="newBtn" class="ghost" title="Start from a template">New</button>
       <button id="openBtn" class="ghost" title="Open a .json project or an exported .html">Open</button>
       <button id="saveBtn" class="ghost" title="Download the project file (Ctrl/Cmd+S)">Save project</button>
+      <button id="histBtn" class="ghost" title="Saved versions of this page">🕘 History</button>
       <span class="sep"></span>
       <button id="undo" class="ghost icon" title="Undo (Ctrl/Cmd+Z)">↶</button>
       <button id="redo" class="ghost icon" title="Redo (Ctrl/Cmd+Shift+Z)">↷</button>
@@ -67,6 +68,10 @@
   <dialog id="tplDlg">
     <div class="dlg-head"><h2>Start from a template</h2><form method="dialog"><button class="ghost icon">✕</button></form></div>
     <div id="tplGrid" class="addgrid one"></div>
+  </dialog>
+  <dialog id="verDlg">
+    <div class="dlg-head"><h2>Version history</h2><form method="dialog"><button class="ghost icon">✕</button></form></div>
+    <div id="verList" class="verlist"></div>
   </dialog>
   <div id="toast" class="toast" role="status"></div>
 

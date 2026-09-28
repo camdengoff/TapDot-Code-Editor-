@@ -89,8 +89,12 @@
   function proxied(u, a, ctx) {
     const px = String(ctx.proxy || '').trim().replace(/\/+$/, '');
     if (!px || a.direct || !/^https?:/i.test(u)) return u;
-    try { if (new URL(u).host === new URL(px).host) return u; } catch (e) { return u; }
-    return px + '/?url=' + encodeURIComponent(u);
+    let url;
+    try { url = new URL(u); if (url.host === new URL(px).host) return u; } catch (e) { return u; }
+    // The live BFC worker maps <worker>/<path> to bethanynaz.org/<path>, so only those links go
+    // through it. (worker/popup-proxy.js also takes ?url= for other sites once it is deployed.)
+    if (url.hostname.replace(/^www\./, '') !== 'bethanynaz.org') return u;
+    return px + url.pathname + url.search + url.hash;
   }
 
   // `<a>` when the action does something, `<div>` otherwise.

@@ -34,7 +34,9 @@ Code blocks only run scripts on Squarespace plans that allow JavaScript. After t
 `https://cdn.jsdelivr.net/gh/camdengoff/TapDot-Code-Editor-@main/dist/tapdot-editor.js` instead, which
 follows this repo automatically (it can take up to a day to refresh).
 
-## Auto-update a Squarespace page (Publish)
+## Auto-update a Squarespace page (Publish), set aside for now
+
+The Publish button is hidden in the editor (`SHOW_PUBLISH` in `editor/app.js`) until the worker below is set up.
 
 Instead of pasting new HTML each time, publish the page to the worker and paste a small code block once.
 The code block always loads the latest published version.
@@ -80,6 +82,9 @@ The worker used is the one in the Pop-up proxy box (the BFC worker by default).
   simple markup such as `[[#ef4444|words]]` and `**bold**`.
 - **Export**: copy or download the HTML. Options for the Squarespace fixes, full-screen vs inline layout,
   and keeping an editable copy inside the HTML so it can be reopened later.
+- **Version history** (🕘 History): save named versions, and one is kept automatically when you copy or
+  download the HTML and every 10 minutes while editing. Open any version to go back to it (Undo returns).
+  Versions live in that browser; use Save project for a copy elsewhere.
 - Autosaves in the browser, plus Save project (`.json`), Open, undo/redo and drag-to-reorder.
 
 ## Files

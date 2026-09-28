@@ -43,6 +43,88 @@
   function save() {
     try { localStorage.setItem(STORE, JSON.stringify(state)); $('#saveState').textContent = 'Saved on this device'; }
     catch (e) { $('#saveState').textContent = 'Too big to autosave: use Save project'; }
+    autoVersion();
+  }
+
+  // ── Version history (kept in this browser's IndexedDB) ───────────────
+  // Versions are made by hand ("Save this version"), when the HTML is copied or downloaded,
+  // before a version is restored, and automatically every 10 minutes while editing.
+  const VERS = { db: null, max: 100, every: 10 * 60 * 1000, lastAuto: Date.now(), lastJson: '' };
+  function verDb() {
+    if (VERS.db) return VERS.db;
+    VERS.db = new Promise((ok, fail) => {
+      if (!window.indexedDB) { fail(new Error('This browser cannot keep version history.')); return; }
+      const r = indexedDB.open('tapdot-editor', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('versions', { keyPath: 'id' });
+      r.onsuccess = () => ok(r.result);
+      r.onerror = () => fail(r.error || new Error('Could not open version history.'));
+    });
+    VERS.db.catch(() => { VERS.db = null; });
+    return VERS.db;
+  }
+  async function verTx(mode, fn) {
+    const db = await verDb();
+    return new Promise((ok, fail) => {
+      const tx = db.transaction('versions', mode);
+      const out = fn(tx.objectStore('versions'));
+      tx.oncomplete = () => ok(out && 'result' in out ? out.result : undefined);
+      tx.onerror = () => fail(tx.error);
+    });
+  }
+  const verAll = () => verTx('readonly', (st) => st.getAll()).then((l) => l.sort((a, b) => b.id - a.id));
+  async function addVersion(kind, note) {
+    const json = JSON.stringify(state);
+    const list = await verAll();
+    // Skip automatic versions when nothing changed since the newest one.
+    if (kind !== 'saved' && list[0] && list[0].json === json) return false;
+    const id = Math.max(Date.now(), list[0] ? list[0].id + 1 : 0);
+    await verTx('readwrite', (st) => {
+      st.put({ id, at: new Date(id).toISOString(), kind, note: note || '', title: state.title || '', json });
+      list.slice(VERS.max - 1).forEach((v) => st.delete(v.id));
+    });
+    VERS.lastJson = json;
+    return true;
+  }
+  function autoVersion() {
+    if (Date.now() - VERS.lastAuto < VERS.every) return;
+    VERS.lastAuto = Date.now();
+    addVersion('auto').catch(() => { /* history is best effort */ });
+  }
+  const KIND = { saved: 'Saved', export: 'HTML copied', auto: 'Autosave', restore: 'Before restoring' };
+  async function showHistory() {
+    const list = $('#verList');
+    const note = h('input', { type: 'text', maxlength: 200, placeholder: 'Note, e.g. Easter service times' });
+    const saveBtn = h('button', { class: 'primary', onclick: async () => {
+      try { await addVersion('saved', note.value.trim()); toast('Version saved'); showHistory(); }
+      catch (e) { toast(e.message); }
+    } }, 'Save this version');
+    const top = h('div', { class: 'vernew' }, note, saveBtn);
+    if (!$('#verDlg').open) $('#verDlg').showModal();
+    let vers;
+    try { vers = await verAll(); }
+    catch (e) { fill(list, h('p', { class: 'hint pad' }, e.message)); return; }
+    const when = (at) => new Date(at).toLocaleString([], { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+    fill(list, top,
+      h('p', { class: 'hint pad' }, vers.length
+        ? 'Saved in this browser (the newest ' + VERS.max + '). A version is also kept each time you copy or download the HTML, and every 10 minutes while you edit. Use Save project to keep a copy elsewhere.'
+        : 'No versions yet. Save one now, or one is kept each time you copy or download the HTML.'),
+      vers.map((v) => h('div', { class: 'verrow' },
+        h('div', { class: 'vermeta' },
+          h('b', null, when(v.at)),
+          h('span', null, [KIND[v.kind] || v.kind, v.note, v.title].filter(Boolean).join(' · '))),
+        h('div', { class: 'veracts' },
+          h('button', { class: 'ghost', onclick: async () => {
+            try {
+              await addVersion('restore');
+              snapshot(true); // keep any not-yet-recorded edits so Undo can return to them
+              state = TD.normalize(JSON.parse(v.json)); timeTab = 'normal'; open = new Set(); firstRender = true;
+              $('#verDlg').close(); tab = 'blocks'; changed(true); snapshot(true);
+              toast('Opened the version from ' + when(v.at) + '. Undo brings back what you had.');
+            } catch (e) { toast('Could not open that version'); }
+          } }, 'Open'),
+          h('button', { class: 'ghost icon', title: 'Delete this version', onclick: async () => {
+            await verTx('readwrite', (st) => st.delete(v.id)); showHistory();
+          } }, '✕')))));
   }
   function snapshot(now) {
     clearTimeout(hist.t);
@@ -67,7 +149,7 @@
     hist.i = j;
     state = JSON.parse(hist.stack[j]);
     if (!tabIds().includes(timeTab)) timeTab = 'normal';
-    updUndo(); drawPanel(); refresh(true);
+    updUndo(); drawPanel(); refresh(true); save();
   }
 
   // Light edits (typing) → preview only. Structural edits → redraw panel too.
@@ -389,7 +471,7 @@
         const opts = TD.ACTIONS.filter(([v]) => !(f.noSheet && v === 'sheet'));
         const fields = {
           link: [{ k: 'url', t: 'text', l: 'Link', ph: 'https://…' }, { k: 'newTab', t: 'checkbox', l: 'Open in a new tab' }],
-          popup: [{ k: 'url', t: 'text', l: 'Page link', ph: 'https://…', hint: state.exp.proxy ? 'Paste the normal link. It goes through your pop-up proxy automatically.' : 'No pop-up proxy is set in the Export tab, so this link opens in a new tab.' },
+          popup: [{ k: 'url', t: 'text', l: 'Page link', ph: 'https://…', hint: state.exp.proxy ? 'Paste the normal link. bethanynaz.org pages go through the pop-up proxy automatically; other sites load as they are, and some may refuse to show in a pop-up.' : 'No pop-up proxy is set in the Export tab, so this link opens in a new tab.' },
             { k: 'direct', t: 'checkbox', l: 'Skip the pop-up proxy for this link', when: () => !!state.exp.proxy },
             { k: 'title', t: 'text', l: 'Pop-up title' }, { k: 'icon', t: 'emoji', l: 'Pop-up icon' }],
           sheet: [{ k: 'sheet', t: 'select', l: 'Menu', opts: [['', '— choose —']].concat(state.sheets.map((s) => [s.id, TD.iconLabel(s.icon) + s.title])) }],
@@ -812,7 +894,7 @@
         h('input', { type: 'url', value: e.proxy || '', placeholder: TD.DEFAULT_PROXY, oninput: (ev) => { e.proxy = ev.target.value.trim(); e.proxyOff = !e.proxy; changed(); } }),
         e.proxy === TD.DEFAULT_PROXY ? null : h('button', { class: 'ghost', onclick: () => { e.proxy = TD.DEFAULT_PROXY; e.proxyOff = false; changed(true); } }, 'Use the BFC worker'),
         h('div', { class: 'hint' }, 'Every “Open page in pop-up sheet” link goes through this worker so sites that block framing still load. It defaults to the BFC worker; change it to use another one. If it is blank, pop-up links open in a new tab instead.')),
-      publishSection(),
+      SHOW_PUBLISH ? publishSection() : null,
       h('h3', null, 'Export options'),
       opt('squarespace', 'Squarespace code block fixes', 'Forces the page background onto Squarespace wrappers, removes their padding and hides the site search bar, like base html does.'),
       h('div', { class: 'field' }, h('label', { class: 'fl' }, 'Layout'),
@@ -879,6 +961,7 @@
     btn.disabled = false; btn.textContent = '🚀 Publish';
     if (tab === 'export') drawPanel();
   }
+  const SHOW_PUBLISH = false; // Publish to the site is set aside for now; flip to bring it back.
   function publishSection() {
     const e = state.exp;
     const btn = h('button', { class: 'primary', onclick: () => publish(btn) }, '🚀 Publish');
@@ -905,13 +988,14 @@
     try { await navigator.clipboard.writeText(html); }
     catch (e) { const t = $('#exportCode'); if (t) { t.value = html; t.select(); document.execCommand('copy'); } }
     toast('HTML copied. Paste it into a Squarespace code block.');
+    addVersion('export').catch(() => { /* history is best effort */ });
   }
   function download(name, text, type) {
     const a = h('a', { href: URL.createObjectURL(new Blob([text], { type })), download: name });
     document.body.append(a); a.click(); a.remove();
   }
   const slug = () => (state.title || 'page').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'page';
-  function downloadExport() { download(slug() + '.html', exportHtml(), 'text/html'); }
+  function downloadExport() { download(slug() + '.html', exportHtml(), 'text/html'); addVersion('export').catch(() => { /* best effort */ }); }
 
   // ── Open / save project files ────────────────────────────────────────
   function importText(txt) {
@@ -921,6 +1005,7 @@
       if (m) data = JSON.parse(m[1]);
       else data = JSON.parse(txt);
       if (!data || !Array.isArray(data.blocks)) throw new Error('no blocks');
+      snapshot(true);
       state = TD.normalize(data); timeTab = 'normal';
       open = new Set(); tab = 'blocks'; firstRender = true;
       changed(true); snapshot(true);
@@ -942,7 +1027,7 @@
     $('#newBtn').onclick = () => {
       $('#tplGrid').replaceChildren(...Object.keys(TD.TEMPLATES).map((k) => h('button', { class: 'addopt', onclick: () => {
         if (!confirm('Replace the current page with “' + TD.TEMPLATES[k].name + '”? (Undo can bring it back.)')) return;
-        state = TD.TEMPLATES[k].build(); timeTab = 'normal'; open = new Set(); firstRender = true; $('#tplDlg').close(); tab = 'blocks'; changed(true); snapshot(true);
+        snapshot(true); state = TD.TEMPLATES[k].build(); timeTab = 'normal'; open = new Set(); firstRender = true; $('#tplDlg').close(); tab = 'blocks'; changed(true); snapshot(true);
       } }, h('b', null, TD.TEMPLATES[k].name))));
       $('#tplDlg').showModal();
     };
@@ -951,6 +1036,7 @@
       inp.onchange = () => { const f = inp.files[0]; if (f) f.text().then(importText); };
       inp.click();
     };
+    $('#histBtn').onclick = showHistory;
     $('#saveBtn').onclick = () => { download(slug() + '.tapdot.json', JSON.stringify(state, null, 1), 'application/json'); toast('Project file saved'); };
     $('#copyBtn').onclick = copyExport;
     $('#pickBtn').onclick = () => { setPick(!picking); if (picking) document.body.classList.add('show-preview'); };
