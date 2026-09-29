@@ -256,11 +256,14 @@
     },
     countdown(b, ctx) {
       const t = zonedToUtc(b.target, b.tz);
-      const unit = (k, l) => '<div class="td-cd-unit"><div class="td-cd-num td-head" data-td-u="' + k + '">0</div><div class="td-cd-lbl">' + l + '</div></div>';
-      const data = (t ? ' data-td-countdown="' + t + '"' : '') + ' data-td-done="' + esc(b.done) + '"' + (b.hideDone ? ' data-td-hidedone="1"' : '');
+      const slot = b.cdStyle === 'slot';
+      const unit = (k, l) => '<div class="td-cd-unit"><div class="td-cd-num td-head' + (slot ? ' td-slot' : '') + '" data-td-u="' + k + '">' +
+        (slot ? '<span class="td-sd"><span>0</span></span>' : '0') + '</div><div class="td-cd-lbl">' + l + '</div></div>';
+      const data = (t ? ' data-td-countdown="' + t + '"' : '') + ' data-td-done="' + esc(b.done) + '"' + (b.hideDone ? ' data-td-hidedone="1"' : '') +
+        (slot && !ctx.noAnim ? ' data-td-intro="1"' : '');
       const body = (b.label ? '<div class="td-cd-label' + (b.sub ? ' td-cd-title td-head' : '') + '">' + md(b.label) + '</div>' : '') +
         (b.sub ? '<div class="td-cd-sub">' + md(b.sub) + '</div>' : '') +
-        '<div class="td-cd-units">' + unit('d', 'Days') + unit('h', 'Hours') + unit('m', 'Min') + unit('s', 'Sec') + '</div>' +
+        '<div class="td-cd-units' + (slot ? ' td-cd-slot' : '') + '">' + unit('d', 'Days') + unit('h', 'Hours') + unit('m', 'Min') + unit('s', 'Sec') + '</div>' +
         (b.btnLabel && b.action && actAttrs(b.action, {}).live
           ? '<div class="td-cd-btn">' + tap('td-btn td-inline-btn', b.action, esc(b.btnLabel), ctx, '', b.label) + '</div>' : '');
       if (!safeUrl(b.image, true)) return '<div class="td-countdown td-card td-pad"' + data + '>' + body + '</div>';
@@ -478,6 +481,11 @@ ${t.pressFx ? '.td-tap:active{transform:scale(.97)}' : ''}
 .td-cd-num{font-size:26px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
 .td-cd-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--td-muted);margin-top:4px}
 .td-cd-done{text-align:center;font-weight:700;font-size:18px}
+.td-cd-slot{gap:14px}
+.td-cd-slot .td-cd-unit{background:none;padding:0;max-width:none;flex:0 1 auto;min-width:56px}
+.td-cd-slot .td-cd-num{font-size:44px;display:flex;justify-content:center;line-height:1.15}
+.td-sd{position:relative;display:inline-block;overflow:hidden;width:.64em;height:1.15em;-webkit-mask-image:linear-gradient(transparent,#000 22%,#000 78%,transparent);mask-image:linear-gradient(transparent,#000 22%,#000 78%,transparent)}
+.td-sd span{position:absolute;inset:0;text-align:center;will-change:transform,filter}
 .td-cd-hasimg,.td-cd-bg{overflow:hidden;position:relative}
 .td-cd-photo{position:relative;overflow:hidden}
 .td-cd-photo img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
@@ -654,6 +662,43 @@ ${t.pressFx ? '.td-tap:active{transform:scale(.97)}' : ''}
 
     // countdowns
     function pad(n) { return n < 10 ? '0' + n : '' + n; }
+    // Slot-machine digits: each digit rolls up, blurred while moving and sharp when it lands.
+    var REDUCE = W.matchMedia && W.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    function roll(cell, ch, dur) {
+      var old = cell.lastChild, nu = D.createElement('span'); nu.textContent = ch; cell.appendChild(nu);
+      if (REDUCE || !nu.animate) { while (cell.firstChild !== nu) cell.removeChild(cell.firstChild); return; }
+      var blur = dur < 160 ? 7 : 4, ease = dur < 160 ? 'linear' : 'cubic-bezier(.2,.8,.25,1)';
+      if (old) old.animate([{ transform: 'translateY(0)', filter: 'blur(0)', opacity: 1 }, { transform: 'translateY(-100%)', filter: 'blur(' + blur + 'px)', opacity: 0 }],
+        { duration: dur, easing: ease, fill: 'forwards' }).onfinish = function () { if (old.parentNode) old.parentNode.removeChild(old); };
+      nu.animate([{ transform: 'translateY(100%)', filter: 'blur(' + (blur + 2) + 'px)', opacity: 0 }, { transform: 'translateY(0)', filter: 'blur(0)', opacity: 1 }],
+        { duration: dur, easing: ease });
+    }
+    function spin(cell, col) {
+      // A quick spin through random digits that slows down and settles on the real value.
+      cell._spin = 1;
+      var steps = 6 + col * 2, t = 0;
+      for (var i = 0; i < steps; i++) (function (i) {
+        var last = i === steps - 1, p = i / (steps - 1), dur = Math.round(45 + 330 * p * p * p);
+        setTimeout(function () {
+          roll(cell, last ? cell._want : String(Math.floor(Math.random() * 10)), dur);
+          if (last) cell._spin = 0;
+        }, t);
+        t += dur * (last ? 1 : 0.9);
+      })(i);
+    }
+    function slotSet(el, str, intro) {
+      var cells = el.children;
+      while (cells.length < str.length) { var n = D.createElement('span'); n.className = 'td-sd'; n.innerHTML = '<span>0</span>'; el.insertBefore(n, el.firstChild); }
+      while (cells.length > str.length) el.removeChild(el.firstChild);
+      for (var i = 0; i < str.length; i++) {
+        var cell = cells[i], ch = str.charAt(i);
+        cell._want = ch;
+        if (intro && !REDUCE) { spin(cell, i + (+el.getAttribute('data-td-col') || 0)); continue; }
+        if (cell._spin || (cell.lastChild && cell.lastChild.textContent === ch)) continue;
+        roll(cell, ch, 420);
+      }
+    }
+    $$('.td-cd-slot').forEach(function (u) { $$('.td-slot', u).forEach(function (e, i) { e.setAttribute('data-td-col', i * 2); }); });
     function tick() {
       $$('[data-td-countdown]').forEach(function (c) {
         var ms = +c.getAttribute('data-td-countdown') - Date.now();
@@ -662,7 +707,11 @@ ${t.pressFx ? '.td-tap:active{transform:scale(.97)}' : ''}
           var u = $('.td-cd-units', c); if (u) u.outerHTML = '<div class="td-cd-done">' + c.getAttribute('data-td-done').replace(/</g, '&lt;') + '</div>';
           return;
         }
-        var s = Math.floor(ms / 1000), set = function (k, v) { var e = $('[data-td-u="' + k + '"]', c); if (e) e.textContent = v; };
+        var intro = !c._tdInit && c.getAttribute('data-td-intro'); c._tdInit = 1;
+        var s = Math.floor(ms / 1000), set = function (k, v) {
+          var e = $('[data-td-u="' + k + '"]', c); if (!e) return;
+          if (e.classList.contains('td-slot')) slotSet(e, String(v), intro); else e.textContent = v;
+        };
         set('d', Math.floor(s / 86400)); set('h', pad(Math.floor(s / 3600) % 24)); set('m', pad(Math.floor(s / 60) % 60)); set('s', pad(s % 60));
       });
     }
@@ -821,7 +870,7 @@ ${t.pressFx ? '.td-tap:active{transform:scale(.97)}' : ''}
    */
   TD.render = function (p, opts) {
     opts = opts || {};
-    const ctx = { title: p.title, proxy: p.exp.proxy };
+    const ctx = { title: p.title, proxy: p.exp.proxy, noAnim: !!opts.noAnim };
     const t = p.theme;
     const anim = t.anim !== 'none' && !opts.noAnim;
     let n = 0;
