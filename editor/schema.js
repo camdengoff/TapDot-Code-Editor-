@@ -295,8 +295,12 @@
         { k: 'tz', t: 'select', l: 'Time zone', opts: TD.TIMEZONES },
         { k: 'done', t: 'text', l: 'Text when finished' },
         { k: 'hideDone', t: 'checkbox', l: 'Hide the block when finished' },
+        { k: 'image', t: 'image', l: 'Photo (optional)' },
+        { k: 'imgLayout', t: 'select', l: 'Photo placement', opts: [['top', 'Above the countdown'], ['bg', 'Behind the countdown']], when: (b) => !!b.image },
+        { k: 'aspect', t: 'select', l: 'Photo shape', opts: TD.ASPECTS.filter((a) => a[0] !== 'auto'), when: (b) => !!b.image && b.imgLayout !== 'bg' },
+        { k: 'dim', t: 'range', l: 'Darken photo', min: 0, max: 90, unit: '%', when: (b) => !!b.image && b.imgLayout === 'bg', hint: 'Keeps the numbers readable on top of the photo.' },
       ],
-      defaults: () => ({ label: 'Christmas Eve service starts in', target: '', tz: 'America/Chicago', done: 'Happening now!', hideDone: false }),
+      defaults: () => ({ label: 'Christmas Eve service starts in', target: '', tz: 'America/Chicago', done: 'Happening now!', hideDone: false, image: '', imgLayout: 'top', aspect: '16/9', dim: 50 }),
       summary: (b) => b.label,
     },
     spacer: {

@@ -250,9 +250,17 @@
     countdown(b) {
       const t = zonedToUtc(b.target, b.tz);
       const unit = (k, l) => '<div class="td-cd-unit"><div class="td-cd-num td-head" data-td-u="' + k + '">0</div><div class="td-cd-lbl">' + l + '</div></div>';
-      return '<div class="td-countdown td-card td-pad"' + (t ? ' data-td-countdown="' + t + '"' : '') + ' data-td-done="' + esc(b.done) + '"' + (b.hideDone ? ' data-td-hidedone="1"' : '') + '>' +
-        (b.label ? '<div class="td-cd-label">' + md(b.label) + '</div>' : '') +
-        '<div class="td-cd-units">' + unit('d', 'Days') + unit('h', 'Hours') + unit('m', 'Min') + unit('s', 'Sec') + '</div></div>';
+      const data = (t ? ' data-td-countdown="' + t + '"' : '') + ' data-td-done="' + esc(b.done) + '"' + (b.hideDone ? ' data-td-hidedone="1"' : '');
+      const body = (b.label ? '<div class="td-cd-label">' + md(b.label) + '</div>' : '') +
+        '<div class="td-cd-units">' + unit('d', 'Days') + unit('h', 'Hours') + unit('m', 'Min') + unit('s', 'Sec') + '</div>';
+      if (!safeUrl(b.image, true)) return '<div class="td-countdown td-card td-pad"' + data + '>' + body + '</div>';
+      if (b.imgLayout === 'bg') {
+        const dim = Math.min(90, Math.max(0, b.dim == null ? 50 : +b.dim)) / 100;
+        return '<div class="td-countdown td-card td-pad td-cd-bg"' + data + '>' + img(b.image, '', 'td-cd-bgimg') +
+          '<div class="td-cd-shade" style="background:rgba(0,0,0,' + dim + ')"></div><div class="td-cd-body">' + body + '</div></div>';
+      }
+      return '<div class="td-countdown td-card td-cd-hasimg"' + data + '><div class="td-cd-photo" style="' + aspectCss(b.aspect || '16/9') + '">' + img(b.image, '') + '</div>' +
+        '<div class="td-pad">' + body + '</div></div>';
     },
     spacer(b) {
       return '<div class="td-spacer" style="height:' + (+b.height || 0) + 'px">' + (b.line ? '<hr>' : '') + '</div>';
@@ -457,6 +465,14 @@ ${t.pressFx ? '.td-tap:active{transform:scale(.97)}' : ''}
 .td-cd-num{font-size:26px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
 .td-cd-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--td-muted);margin-top:4px}
 .td-cd-done{text-align:center;font-weight:700;font-size:18px}
+.td-cd-hasimg,.td-cd-bg{overflow:hidden;position:relative}
+.td-cd-photo{position:relative;overflow:hidden}
+.td-cd-photo img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.td-cd-bgimg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.td-cd-shade{position:absolute;inset:0}
+.td-cd-body{position:relative;padding:18px 0}
+.td-cd-bg .td-cd-label,.td-cd-bg .td-cd-lbl,.td-cd-bg .td-cd-num,.td-cd-bg .td-cd-done{color:#fff}
+.td-cd-bg .td-cd-unit{background:rgba(255,255,255,.16);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
 .td-spacer{display:flex;align-items:center}
 .td-spacer hr{width:100%;border:0;border-top:1px solid rgba(128,128,128,.25)}
 /* overlays: pop-up page, menus, event details, zoom, toast */

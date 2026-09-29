@@ -438,10 +438,10 @@
           h('div', { class: 'imgf-r' },
             isData
               ? h('div', { class: 'uploaded' }, 'Uploaded image · ' + kb(dataSize(v)))
-              : h('input', { type: 'url', value: v, placeholder: 'Paste image link…', oninput: (e) => { setp(o, f.k, e.target.value.trim()); ch(); const t = wrap.querySelector('.thumb'); t.replaceChildren(e.target.value ? h('img', { src: e.target.value, alt: '' }) : '🖼️'); } }),
+              : h('input', { type: 'url', value: v, placeholder: 'Paste image link…', oninput: (e) => { setp(o, f.k, e.target.value.trim()); ch(); const t = wrap.querySelector('.thumb'); t.replaceChildren(e.target.value ? h('img', { src: e.target.value, alt: '' }) : '🖼️'); }, onchange: () => ch(true) }),
             h('div', { class: 'row' },
-              h('button', { type: 'button', class: 'ghost sm', onclick: () => pickFiles(false, (a) => { if (a[0]) { setp(o, f.k, a[0]); draw(); ch(); } }) }, '⬆ Upload'),
-              v ? h('button', { type: 'button', class: 'ghost sm', onclick: () => { setp(o, f.k, ''); draw(); ch(); } }, 'Remove') : null)));
+              h('button', { type: 'button', class: 'ghost sm', onclick: () => pickFiles(false, (a) => { if (a[0]) { setp(o, f.k, a[0]); draw(); ch(true); } }) }, '⬆ Upload'),
+              v ? h('button', { type: 'button', class: 'ghost sm', onclick: () => { setp(o, f.k, ''); draw(); ch(true); } }, 'Remove') : null)));
       };
       draw();
       return wrap;
