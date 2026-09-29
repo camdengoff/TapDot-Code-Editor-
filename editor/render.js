@@ -60,7 +60,10 @@
         // No proxy worker set: many sites refuse to load in a pop-up, so open a new tab instead.
         if (!String(ctx.proxy || '').trim()) return { attrs: ' href="' + esc(u) + '" target="_blank" rel="noopener"', live: true };
         ctx.usesPage = true;
-        return { attrs: ' href="' + esc(proxied(u, a, ctx)) + '"' + d('act', 'popup') + d('title', a.title || '') + d('icon', a.icon || '🔗'), live: true };
+        // Without a title the sheet shows the site's name, so remember the real site, not the proxy's.
+        let host = '';
+        try { host = new URL(u).hostname.replace(/^www\./, ''); } catch (e) { /* keep blank */ }
+        return { attrs: ' href="' + esc(proxied(u, a, ctx)) + '"' + d('act', 'popup') + d('title', a.title || '') + d('host', host) + d('icon', a.icon || '🔗'), live: true };
       }
       case 'sheet':
         if (!a.sheet) return { attrs: ' role="button"', live: false };
@@ -98,7 +101,9 @@
   }
 
   // `<a>` when the action does something, `<div>` otherwise.
-  function tap(cls, action, inner, ctx, extraAttrs) {
+  // `label` is what the item says (button label, card title…); a pop-up without its own title uses it.
+  function tap(cls, action, inner, ctx, extraAttrs, label) {
+    if (action && action.type === 'popup' && !action.title && label) action = Object.assign({}, action, { title: plain(label) });
     const r = actAttrs(action, ctx);
     const tag = r.live ? 'a' : 'div';
     return '<' + tag + ' class="' + cls + (r.live ? ' td-tap' : '') + '"' + r.attrs + (extraAttrs || '') + '>' + inner + '</' + tag + '>';
@@ -114,6 +119,8 @@
     const u = /^(https?:|data:image\/)/i.test(v || '') ? safeUrl(v, true) : '';
     return u ? '<img class="td-ico" src="' + esc(u) + '" alt="" />' : esc(v);
   };
+  // Markup-free text, e.g. for a pop-up title taken from a rich-text label.
+  const plain = (s) => md(s || '').replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").trim();
   const aspectCss = (a) => (a && a !== 'auto' ? 'aspect-ratio:' + cssv(a) + ';' : '');
 
   // Convert "2026-12-24T18:00" in a given IANA zone to a UTC timestamp.
@@ -156,10 +163,10 @@
           (b.title ? '<div class="td-hero-title td-head" style="font-size:' + (+b.titleSize || 23) + 'px">' + md(b.title) + '</div>' : '') +
           (b.subtitle ? '<div class="td-hero-sub">' + md(b.subtitle) + '</div>' : '') + '</div>';
       }
-      return tap('td-hero td-card td-hero-' + b.textPos + ' td-fit-' + cssv(b.fit), b.action, media + text, ctx);
+      return tap('td-hero td-card td-hero-' + b.textPos + ' td-fit-' + cssv(b.fit), b.action, media + text, ctx, '', b.title);
     },
     heading(b, ctx) {
-      const link = b.linkText ? tap('td-see-all', b.action, esc(b.linkText), ctx) : '';
+      const link = b.linkText ? tap('td-see-all', b.action, esc(b.linkText), ctx, '', b.title || b.linkText) : '';
       return '<div class="td-heading" style="justify-content:' + (b.align === 'center' && !link ? 'center' : 'space-between') + '"><h2 class="td-head" style="font-size:' + (+b.size || 18) + 'px">' + md(b.title) + '</h2>' + link + '</div>';
     },
     text(b) {
@@ -172,7 +179,7 @@
         if (it.bg) st += 'background:' + cssv(it.bg) + ';border-color:' + cssv(it.bg) + ';';
         if (it.color) st += 'color:' + cssv(it.color) + ';';
         const icon = it.icon ? '<span class="td-btn-icon"' + (it.iconBg ? ' style="background:' + cssv(it.iconBg) + '"' : ' style="width:auto;background:none"') + '>' + ico(it.icon) + '</span>' : '';
-        return tap('td-btn', it.action, icon + '<span class="td-btn-label">' + md(it.label) + '</span>', ctx, st ? ' style="' + st + '"' : '');
+        return tap('td-btn', it.action, icon + '<span class="td-btn-label">' + md(it.label) + '</span>', ctx, st ? ' style="' + st + '"' : '', it.label);
       }).join('');
       return '<div class="td-btns td-btns-' + cssv(b.layout) + ' td-btn-' + cssv(b.variant) + ' td-btn-' + cssv(b.size) + '">' + items + '</div>';
     },
@@ -185,7 +192,7 @@
         '<div class="td-banner-title td-head">' + md(b.title) + '</div>' +
         (b.subtitle ? '<div class="td-banner-sub">' + md(b.subtitle) + '</div>' : '') + '</div>' +
         (b.arrow ? '<div class="td-arrow">›</div>' : '');
-      return tap('td-banner td-card', b.action, inner, ctx);
+      return tap('td-banner td-card', b.action, inner, ctx, '', b.title);
     },
     cards(b, ctx) {
       const items = b.items.map((it) => {
@@ -193,13 +200,13 @@
           ? '<div class="td-cardimg" style="' + aspectCss(b.aspect) + '">' + img(it.image, it.name) + '</div>'
           : '<div class="td-cardimg" style="width:' + (+b.imgSize || 64) + 'px;height:' + (+b.imgSize || 64) + 'px">' + img(it.image, it.name) + '</div>';
         const info = '<div class="td-cardinfo">' + (it.tag ? '<div class="td-tag">' + md(it.tag) + '</div>' : '') + '<div class="td-cardname td-head">' + md(it.name) + '</div></div>';
-        return tap('td-cardi td-card', it.action, pic + info, ctx, b.layout === 'scroll' ? ' style="width:' + (+b.width || 195) + 'px"' : '');
+        return tap('td-cardi td-card', it.action, pic + info, ctx, b.layout === 'scroll' ? ' style="width:' + (+b.width || 195) + 'px"' : '', it.name);
       }).join('');
       return '<div class="td-cards td-cards-' + cssv(b.layout) + ' td-cards-' + cssv(b.variant) + '">' + items + '</div>';
     },
     accordion(b, ctx) {
       const items = b.items.map((it) => {
-        const btn = it.btnLabel ? tap('td-btn td-inline-btn', it.action, esc(it.btnLabel), ctx) : '';
+        const btn = it.btnLabel ? tap('td-btn td-inline-btn', it.action, esc(it.btnLabel), ctx, '', it.title) : '';
         return '<details class="td-acc-item"' + (it.open ? ' open' : '') + '><summary>' +
           (it.icon ? '<span class="td-acc-icon">' + ico(it.icon) + '</span>' : '') +
           '<span class="td-acc-title td-head">' + md(it.title) + '</span><span class="td-acc-chev">›</span></summary>' +
@@ -212,7 +219,7 @@
         const cap = b.captions !== 'none' && (it.title || it.caption)
           ? '<div class="td-slide-cap">' + (it.title ? '<div class="td-slide-title td-head">' + md(it.title) + '</div>' : '') + (it.caption ? '<div class="td-slide-sub">' + md(it.caption) + '</div>' : '') + '</div>'
           : '';
-        return tap('td-slide td-card', it.action, '<div class="td-slide-media" style="' + aspectCss(b.aspect) + '">' + img(it.image, it.title) + '</div>' + cap, ctx);
+        return tap('td-slide td-card', it.action, '<div class="td-slide-media" style="' + aspectCss(b.aspect) + '">' + img(it.image, it.title) + '</div>' + cap, ctx, '', it.title);
       }).join('');
       const dots = b.dots && b.items.length > 1 ? '<div class="td-dots">' + b.items.map((_, i) => '<button type="button" aria-label="Slide ' + (i + 1) + '"' + (i === 0 ? ' class="on"' : '') + '></button>').join('') + '</div>' : '';
       const arrows = b.arrows && b.items.length > 1 ? '<button type="button" class="td-sl-arrow td-sl-prev" aria-label="Previous">‹</button><button type="button" class="td-sl-arrow td-sl-next" aria-label="Next">›</button>' : '';
@@ -220,7 +227,7 @@
     },
     image(b, ctx) {
       const media = '<div class="td-image-media" style="' + aspectCss(b.aspect) + '">' + img(b.image, b.alt) + '</div>';
-      return tap('td-image td-card' + (b.aspect === 'auto' ? ' td-auto' : ''), b.action, media + (b.caption ? '<div class="td-image-cap">' + md(b.caption) + '</div>' : ''), ctx);
+      return tap('td-image td-card' + (b.aspect === 'auto' ? ' td-auto' : ''), b.action, media + (b.caption ? '<div class="td-image-cap">' + md(b.caption) + '</div>' : ''), ctx, '', b.caption);
     },
     gallery(b, ctx) {
       if (b.zoom) ctx.usesZoom = true;
@@ -254,7 +261,8 @@
       const body = (b.label ? '<div class="td-cd-label' + (b.sub ? ' td-cd-title td-head' : '') + '">' + md(b.label) + '</div>' : '') +
         (b.sub ? '<div class="td-cd-sub">' + md(b.sub) + '</div>' : '') +
         '<div class="td-cd-units">' + unit('d', 'Days') + unit('h', 'Hours') + unit('m', 'Min') + unit('s', 'Sec') + '</div>' +
-        (b.btnLabel && b.action && actAttrs(b.action, {}).live ? '<div class="td-cd-btn">' + tap('td-btn td-inline-btn', b.action, esc(b.btnLabel), ctx) + '</div>' : '');
+        (b.btnLabel && b.action && actAttrs(b.action, {}).live
+          ? '<div class="td-cd-btn">' + tap('td-btn td-inline-btn', b.action, esc(b.btnLabel), ctx, '', b.label) + '</div>' : '');
       if (!safeUrl(b.image, true)) return '<div class="td-countdown td-card td-pad"' + data + '>' + body + '</div>';
       if (b.imgLayout === 'bg') {
         const dim = Math.min(90, Math.max(0, b.dim == null ? 50 : +b.dim)) / 100;
@@ -567,9 +575,9 @@ ${t.pressFx ? '.td-tap:active{transform:scale(.97)}' : ''}
       var s = D.getElementById(id); if (!s) return;
       closeAll(); s.classList.add('open'); $('#td-bd').classList.add('open'); lock(true);
     }
-    function openPage(url, title, icon) {
+    function openPage(url, title, icon, site) {
       var f = $('#td-page-frame'), l = $('#td-page-loader');
-      var host = url; try { host = new URL(url, location.href).hostname.replace('www.', ''); } catch (e) {}
+      var host = site || url; if (!site) try { host = new URL(url, location.href).hostname.replace('www.', ''); } catch (e) {}
       $('#td-page-title').textContent = title || host;
       var ic = $('#td-page-icon'); ic.textContent = '';
       if (/^(https?:|data:image\/)/i.test(icon || '')) { var im = D.createElement('img'); im.className = 'td-ico'; im.src = icon; ic.appendChild(im); }
@@ -597,7 +605,7 @@ ${t.pressFx ? '.td-tap:active{transform:scale(.97)}' : ''}
       var g = function (k) { return a.getAttribute('data-td-' + k) || ''; };
       e.preventDefault();
       switch (g('act')) {
-        case 'popup': openPage(a.getAttribute('href'), g('title'), g('icon')); break;
+        case 'popup': openPage(a.getAttribute('href'), g('title'), g('icon'), g('host')); break;
         case 'sheet': openSheet('td-sheet-' + g('sheet')); break;
         case 'copy': copy(g('text'), g('toast')); break;
         case 'scroll': closeAll(); scrollToId(a.getAttribute('href').slice(1)); break;
@@ -779,7 +787,7 @@ ${t.pressFx ? '.td-tap:active{transform:scale(.97)}' : ''}
     p.sheets.forEach((s) => {
       const items = s.items.map((it) => tap('td-mi', it.action,
         '<div class="td-mi-icon"' + (it.iconBg ? ' style="background:' + cssv(it.iconBg) + '"' : '') + '>' + ico(it.icon) + '</div>' +
-        '<div class="td-mi-text"><div class="td-mi-title td-head">' + md(it.title) + '</div>' + (it.desc ? '<div class="td-mi-desc">' + md(it.desc) + '</div>' : '') + '</div><div class="td-arrow">›</div>', ctx)).join('');
+        '<div class="td-mi-text"><div class="td-mi-title td-head">' + md(it.title) + '</div>' + (it.desc ? '<div class="td-mi-desc">' + md(it.desc) + '</div>' : '') + '</div><div class="td-arrow">›</div>', ctx, '', it.title)).join('');
       h += '<div class="td-sheet" id="td-sheet-' + esc(s.id) + '"><div class="td-handle"><span></span></div><div class="td-sheet-head"><div class="td-sheet-head-l">' +
         (s.icon ? '<div class="td-sheet-icon">' + ico(s.icon) + '</div>' : '') + '<div><div class="td-sheet-title td-head">' + md(s.title) + '</div>' +
         (s.subtitle ? '<div class="td-sheet-sub">' + md(s.subtitle) + '</div>' : '') + '</div></div><button class="td-close" data-td-close aria-label="Close">✕</button></div>' +

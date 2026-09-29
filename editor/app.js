@@ -473,7 +473,7 @@
           link: [{ k: 'url', t: 'text', l: 'Link', ph: 'https://…' }, { k: 'newTab', t: 'checkbox', l: 'Open in a new tab' }],
           popup: [{ k: 'url', t: 'text', l: 'Page link', ph: 'https://…', hint: state.exp.proxy ? 'Paste the normal link. bethanynaz.org pages go through the pop-up proxy automatically; other sites load as they are, and some may refuse to show in a pop-up.' : 'No pop-up proxy is set in the Export tab, so this link opens in a new tab.' },
             { k: 'direct', t: 'checkbox', l: 'Skip the pop-up proxy for this link', when: () => !!state.exp.proxy },
-            { k: 'title', t: 'text', l: 'Pop-up title' }, { k: 'icon', t: 'emoji', l: 'Pop-up icon' }],
+            { k: 'title', t: 'text', l: 'Pop-up title', ph: 'Same as the label', hint: 'Leave blank to use the label of the button or card.' }, { k: 'icon', t: 'emoji', l: 'Pop-up icon' }],
           sheet: [{ k: 'sheet', t: 'select', l: 'Menu', opts: [['', '— choose —']].concat(state.sheets.map((s) => [s.id, TD.iconLabel(s.icon) + s.title])) }],
           copy: [{ k: 'text', t: 'textarea', l: 'Text to copy' }, { k: 'toast', t: 'text', l: 'Message after copying' }],
           phone: [{ k: 'phone', t: 'text', l: 'Phone number' }],
