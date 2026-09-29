@@ -247,13 +247,14 @@
       if (!src) return '<div class="td-card td-pad td-muted" style="text-align:center">Add a YouTube or Vimeo link</div>';
       return '<div class="td-video td-card" style="' + aspectCss(b.aspect) + '"><iframe src="' + esc(src) + '" title="Video" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowfullscreen></iframe></div>';
     },
-    countdown(b) {
+    countdown(b, ctx) {
       const t = zonedToUtc(b.target, b.tz);
       const unit = (k, l) => '<div class="td-cd-unit"><div class="td-cd-num td-head" data-td-u="' + k + '">0</div><div class="td-cd-lbl">' + l + '</div></div>';
       const data = (t ? ' data-td-countdown="' + t + '"' : '') + ' data-td-done="' + esc(b.done) + '"' + (b.hideDone ? ' data-td-hidedone="1"' : '');
       const body = (b.label ? '<div class="td-cd-label' + (b.sub ? ' td-cd-title td-head' : '') + '">' + md(b.label) + '</div>' : '') +
         (b.sub ? '<div class="td-cd-sub">' + md(b.sub) + '</div>' : '') +
-        '<div class="td-cd-units">' + unit('d', 'Days') + unit('h', 'Hours') + unit('m', 'Min') + unit('s', 'Sec') + '</div>';
+        '<div class="td-cd-units">' + unit('d', 'Days') + unit('h', 'Hours') + unit('m', 'Min') + unit('s', 'Sec') + '</div>' +
+        (b.btnLabel && b.action && actAttrs(b.action, {}).live ? '<div class="td-cd-btn">' + tap('td-btn td-inline-btn', b.action, esc(b.btnLabel), ctx) + '</div>' : '');
       if (!safeUrl(b.image, true)) return '<div class="td-countdown td-card td-pad"' + data + '>' + body + '</div>';
       if (b.imgLayout === 'bg') {
         const dim = Math.min(90, Math.max(0, b.dim == null ? 50 : +b.dim)) / 100;
@@ -462,6 +463,7 @@ ${t.pressFx ? '.td-tap:active{transform:scale(.97)}' : ''}
 .td-video iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
 .td-cd-label{text-align:center;color:var(--td-muted);font-size:13px;margin-bottom:10px}
 .td-cd-title{font-size:18px;font-weight:700;color:var(--td-text);margin-bottom:4px}
+.td-cd-btn{text-align:center;margin-top:4px}
 .td-cd-sub{text-align:center;color:var(--td-muted);font-size:13px;margin-bottom:12px}
 .td-cd-units{display:flex;justify-content:center;gap:10px}
 .td-cd-unit{flex:1;max-width:76px;text-align:center;background:var(--td-card2);border-radius:calc(var(--td-radius) * .7);padding:10px 4px}
