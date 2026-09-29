@@ -494,6 +494,8 @@ ${t.pressFx ? '.td-tap:active{transform:scale(.97)}' : ''}
 .td-cd-body{position:relative;padding:18px 0}
 .td-cd-bg .td-cd-label,.td-cd-bg .td-cd-sub,.td-cd-bg .td-cd-lbl,.td-cd-bg .td-cd-num,.td-cd-bg .td-cd-done{color:#fff}
 .td-cd-bg .td-cd-unit{background:rgba(255,255,255,.16);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.td-cd-bg .td-cd-slot .td-cd-unit{background:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+.td-cd-bg .td-cd-slot .td-cd-num,.td-cd-bg .td-cd-slot .td-cd-lbl{text-shadow:0 2px 12px rgba(0,0,0,.45)}
 .td-spacer{display:flex;align-items:center}
 .td-spacer hr{width:100%;border:0;border-top:1px solid rgba(128,128,128,.25)}
 /* overlays: pop-up page, menus, event details, zoom, toast */
