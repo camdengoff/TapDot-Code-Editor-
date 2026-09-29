@@ -251,7 +251,8 @@
       const t = zonedToUtc(b.target, b.tz);
       const unit = (k, l) => '<div class="td-cd-unit"><div class="td-cd-num td-head" data-td-u="' + k + '">0</div><div class="td-cd-lbl">' + l + '</div></div>';
       const data = (t ? ' data-td-countdown="' + t + '"' : '') + ' data-td-done="' + esc(b.done) + '"' + (b.hideDone ? ' data-td-hidedone="1"' : '');
-      const body = (b.label ? '<div class="td-cd-label">' + md(b.label) + '</div>' : '') +
+      const body = (b.label ? '<div class="td-cd-label' + (b.sub ? ' td-cd-title td-head' : '') + '">' + md(b.label) + '</div>' : '') +
+        (b.sub ? '<div class="td-cd-sub">' + md(b.sub) + '</div>' : '') +
         '<div class="td-cd-units">' + unit('d', 'Days') + unit('h', 'Hours') + unit('m', 'Min') + unit('s', 'Sec') + '</div>';
       if (!safeUrl(b.image, true)) return '<div class="td-countdown td-card td-pad"' + data + '>' + body + '</div>';
       if (b.imgLayout === 'bg') {
@@ -460,6 +461,8 @@ ${t.pressFx ? '.td-tap:active{transform:scale(.97)}' : ''}
 .td-video{position:relative}
 .td-video iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
 .td-cd-label{text-align:center;color:var(--td-muted);font-size:13px;margin-bottom:10px}
+.td-cd-title{font-size:18px;font-weight:700;color:var(--td-text);margin-bottom:4px}
+.td-cd-sub{text-align:center;color:var(--td-muted);font-size:13px;margin-bottom:12px}
 .td-cd-units{display:flex;justify-content:center;gap:10px}
 .td-cd-unit{flex:1;max-width:76px;text-align:center;background:var(--td-card2);border-radius:calc(var(--td-radius) * .7);padding:10px 4px}
 .td-cd-num{font-size:26px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
@@ -471,7 +474,7 @@ ${t.pressFx ? '.td-tap:active{transform:scale(.97)}' : ''}
 .td-cd-bgimg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .td-cd-shade{position:absolute;inset:0}
 .td-cd-body{position:relative;padding:18px 0}
-.td-cd-bg .td-cd-label,.td-cd-bg .td-cd-lbl,.td-cd-bg .td-cd-num,.td-cd-bg .td-cd-done{color:#fff}
+.td-cd-bg .td-cd-label,.td-cd-bg .td-cd-sub,.td-cd-bg .td-cd-lbl,.td-cd-bg .td-cd-num,.td-cd-bg .td-cd-done{color:#fff}
 .td-cd-bg .td-cd-unit{background:rgba(255,255,255,.16);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
 .td-spacer{display:flex;align-items:center}
 .td-spacer hr{width:100%;border:0;border-top:1px solid rgba(128,128,128,.25)}

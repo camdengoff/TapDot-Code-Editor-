@@ -291,6 +291,7 @@
       name: 'Countdown', icon: '⏳', desc: 'Live countdown to a date',
       fields: [
         { k: 'label', t: 'text', l: 'Label', rich: true },
+        { k: 'sub', t: 'text', l: 'Subheading (optional)', rich: true, hint: 'With a subheading, the label shows as a bold heading above it.' },
         { k: 'target', t: 'datetime', l: 'Counts down to' },
         { k: 'tz', t: 'select', l: 'Time zone', opts: TD.TIMEZONES },
         { k: 'done', t: 'text', l: 'Text when finished' },
@@ -300,7 +301,7 @@
         { k: 'aspect', t: 'select', l: 'Photo shape', opts: TD.ASPECTS.filter((a) => a[0] !== 'auto'), when: (b) => !!b.image && b.imgLayout !== 'bg' },
         { k: 'dim', t: 'range', l: 'Darken photo', min: 0, max: 90, unit: '%', when: (b) => !!b.image && b.imgLayout === 'bg', hint: 'Keeps the numbers readable on top of the photo.' },
       ],
-      defaults: () => ({ label: 'Christmas Eve service starts in', target: '', tz: 'America/Chicago', done: 'Happening now!', hideDone: false, image: '', imgLayout: 'top', aspect: '16/9', dim: 50 }),
+      defaults: () => ({ label: 'Christmas Eve service starts in', target: '', tz: 'America/Chicago', done: 'Happening now!', hideDone: false, sub: '', image: '', imgLayout: 'top', aspect: '16/9', dim: 50 }),
       summary: (b) => b.label,
     },
     spacer: {
