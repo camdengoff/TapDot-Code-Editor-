@@ -20,19 +20,33 @@ can't change how it looks, and projects autosave in the browser like the normal 
 2. Upload it to Squarespace's files: edit any text block, highlight a word, click the link button, choose
    File, and upload it. Squarespace hosts it at `/s/tapdot-editor.js` (you can remove the link afterwards;
    the file stays).
-3. On the page where you want the editor, add a Code block with:
+3. Better: skip the upload and paste the auto-updating code block from
+   `/mnt/project-files/tapdot/squarespace-editor-code-block.txt` (also below). It asks GitHub for the newest
+   commit on `main` and loads exactly that build from jsDelivr, so every push is live within about a minute
+   and the code block never needs changing. If GitHub can't be reached it falls back to `@main`.
 
    ```html
    <div id="tapdot-editor"></div>
-   <script src="/s/tapdot-editor.js"></script>
+   <script>
+   (function () {
+     var repo = 'camdengoff/TapDot-Code-Editor-';
+     function load(ref) {
+       var s = document.createElement('script');
+       s.src = 'https://cdn.jsdelivr.net/gh/' + repo + '@' + ref + '/dist/tapdot-editor.js';
+       document.body.appendChild(s);
+     }
+     fetch('https://api.github.com/repos/' + repo + '/commits/main', { headers: { Accept: 'application/vnd.github.sha' }, cache: 'no-store' })
+       .then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); })
+       .then(function (sha) { sha = sha.trim(); if (!/^[0-9a-f]{40}$/.test(sha)) throw new Error('bad'); load(sha); })
+       .catch(function () { load('main'); });
+   })();
+   </script>
    ```
 
    Optional: set the height with `<div id="tapdot-editor" data-height="800px"></div>`.
 
-Code blocks only run scripts on Squarespace plans that allow JavaScript. After the editor changes, run
-`node tools/build.js` and upload the new file again. To skip re-uploading, point the script at
-`https://cdn.jsdelivr.net/gh/camdengoff/TapDot-Code-Editor-@main/dist/tapdot-editor.js` instead, which
-follows this repo automatically (it can take up to a day to refresh).
+Code blocks only run scripts on Squarespace plans that allow JavaScript. After changing the editor, run
+`node tools/build.js` and commit `dist/tapdot-editor.js`; the code block picks it up on the next page load.
 
 ## Auto-update a Squarespace page (Publish), set aside for now
 
