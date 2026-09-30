@@ -48,6 +48,25 @@ can't change how it looks, and projects autosave in the browser like the normal 
 Code blocks only run scripts on Squarespace plans that allow JavaScript. After changing the editor, run
 `node tools/build.js` and commit `dist/tapdot-editor.js`; the code block picks it up on the next page load.
 
+## Hosting the editor from a private repo (Cloudflare Pages)
+
+To keep this repo private, host the built editor on Cloudflare Pages instead of jsDelivr (which only
+serves public repos):
+
+1. Cloudflare → Workers & Pages → Create → Pages → Connect to Git, and pick this repo.
+2. Build command `node tools/build.js`, build output directory `dist`. Deploy.
+3. The editor is then at `https://<project>.pages.dev/tapdot-editor.js`, and every push to `main` redeploys
+   it. `dist/_headers` makes browsers check for the newest build on each load and lets any site load it.
+4. Point the Squarespace code block at it (a custom domain you own is even better, so you can move hosting
+   later without touching client pages):
+
+   ```html
+   <div id="tapdot-editor"></div>
+   <script src="https://<project>.pages.dev/tapdot-editor.js"></script>
+   ```
+
+5. Only after every client page uses the new address, make the repo private.
+
 ## Auto-update a Squarespace page (Publish), set aside for now
 
 The Publish button is hidden in the editor (`SHOW_PUBLISH` in `editor/app.js`) until the worker below is set up.

@@ -1,0 +1,4 @@
+# Cloudflare Pages headers: always check for the newest build, and allow any site to load it.
+/*
+  Cache-Control: no-cache
+  Access-Control-Allow-Origin: *
