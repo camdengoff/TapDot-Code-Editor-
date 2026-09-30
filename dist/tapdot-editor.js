@@ -10,7 +10,7 @@
     var f = document.createElement('iframe');
     f.title = 'TapDot Editor';
     f.setAttribute('allow', 'clipboard-read; clipboard-write; fullscreen');
-    f.style.cssText = 'display:block;width:100%;border:0;border-radius:12px;background:#0f1115;height:' +
+    f.style.cssText = 'display:block;width:100%;border:0;border-radius:0;background:#0f1115;height:' +
       (host.getAttribute('data-height') || 'max(640px, 92vh)');
     f.srcdoc = HTML;
     host.appendChild(f);
