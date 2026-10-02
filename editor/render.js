@@ -714,7 +714,13 @@ ${t.pressFx ? '.td-tap:active{transform:scale(.97)}' : ''}
           var e = $('[data-td-u="' + k + '"]', c); if (!e) return;
           if (e.classList.contains('td-slot')) slotSet(e, String(v), intro); else e.textContent = v;
         };
-        set('d', Math.floor(s / 86400)); set('h', pad(Math.floor(s / 3600) % 24)); set('m', pad(Math.floor(s / 60) % 60)); set('s', pad(s % 60));
+        var dd = Math.floor(s / 86400), hh = Math.floor(s / 3600) % 24, mm = Math.floor(s / 60) % 60;
+        // Days, hours and minutes that are zero are hidden with their labels.
+        [['d', dd], ['h', hh], ['m', mm]].forEach(function (x) {
+          var e = $('[data-td-u="' + x[0] + '"]', c), u = e && e.closest('.td-cd-unit');
+          if (u) u.style.display = x[1] ? '' : 'none';
+        });
+        set('d', dd); set('h', pad(hh)); set('m', pad(mm)); set('s', pad(s % 60));
       });
     }
     if ($('[data-td-countdown]')) { tick(); setInterval(tick, 1000); }
