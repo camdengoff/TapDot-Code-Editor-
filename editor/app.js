@@ -4,6 +4,18 @@
   const TD = window.TD;
   const STORE = 'tapdot-editor-project-v1';
 
+  // Portal mode: opened from the TapDot portal as /app/editor.html?church=…&page=…, the page is
+  // loaded from and saved to the church's account instead of this browser.
+  const CLOUD = (() => {
+    try {
+      if (!/^\/app\//.test(location.pathname)) return null;
+      const q = new URLSearchParams(location.search);
+      const church = q.get('church'), page = q.get('page');
+      if (!church || !page) return null;
+      return { church, page, api: '/api/churches/' + encodeURIComponent(church) + '/pages/' + encodeURIComponent(page), draftAt: null, name: '', churchName: '', timer: null, saving: false, dirty: false };
+    } catch (e) { return null; }
+  })();
+
   // ── Tiny DOM helper ──────────────────────────────────────────────────
   function h(tag, attrs, ...kids) {
     const el = document.createElement(tag);
@@ -41,6 +53,7 @@
     return TD.TEMPLATES.bethany.build();
   }
   function save() {
+    if (CLOUD) { cloudQueue(); autoVersion(); return; }
     try { localStorage.setItem(STORE, JSON.stringify(state)); $('#saveState').textContent = 'Saved on this device'; }
     catch (e) { $('#saveState').textContent = 'Too big to autosave: use Save project'; }
     autoVersion();
@@ -54,7 +67,7 @@
     if (VERS.db) return VERS.db;
     VERS.db = new Promise((ok, fail) => {
       if (!window.indexedDB) { fail(new Error('This browser cannot keep version history.')); return; }
-      const r = indexedDB.open('tapdot-editor', 1);
+      const r = indexedDB.open(CLOUD ? 'tapdot-portal-' + CLOUD.church + '-' + CLOUD.page : 'tapdot-editor', 1);
       r.onupgradeneeded = () => r.result.createObjectStore('versions', { keyPath: 'id' });
       r.onsuccess = () => ok(r.result);
       r.onerror = () => fail(r.error || new Error('Could not open version history.'));
@@ -177,7 +190,7 @@
       const d = frame.contentDocument;
       const r = d && (d.getElementById('td-root') || d.scrollingElement);
       if (r) scroll = r.scrollTop;
-    } catch (e) { /* ignore */ }
+    } catch (e) { scroll = previewScroll; /* sandboxed preview: use the position it last reported */ }
     const html = TD.render(state, { preview: true, noAnim: !firstRender, forceTime: previewLive ? '' : timeTab });
     firstRender = false;
     frame.onload = () => {
@@ -186,13 +199,17 @@
         const r = d.getElementById('td-root') || d.scrollingElement;
         if (r) r.scrollTop = scroll;
         frame.contentWindow.postMessage({ tdPick: picking }, '*');
-      } catch (e) { /* ignore */ }
+      } catch (e) {
+        try { frame.contentWindow.postMessage({ tdPick: picking, tdScrollTo: scroll }, '*'); } catch (x) { /* ignore */ }
+      }
     };
     frame.srcdoc = html;
     if (tab === 'export') drawExportCode();
   }
   let picking = false;
+  let previewScroll = 0;
   window.addEventListener('message', (e) => {
+    if (e.data && typeof e.data.tdScrollY === 'number') previewScroll = e.data.tdScrollY;
     if (e.data && e.data.tdSelect) {
       const id = e.data.tdSelect;
       tab = 'blocks'; open = new Set([id]);
@@ -894,7 +911,7 @@
         h('input', { type: 'url', value: e.proxy || '', placeholder: TD.DEFAULT_PROXY, oninput: (ev) => { e.proxy = ev.target.value.trim(); e.proxyOff = !e.proxy; changed(); } }),
         e.proxy === TD.DEFAULT_PROXY ? null : h('button', { class: 'ghost', onclick: () => { e.proxy = TD.DEFAULT_PROXY; e.proxyOff = false; changed(true); } }, 'Use the BFC worker'),
         h('div', { class: 'hint' }, 'Every “Open page in pop-up sheet” link goes through this worker so sites that block framing still load. It defaults to the BFC worker; change it to use another one. If it is blank, pop-up links open in a new tab instead.')),
-      SHOW_PUBLISH ? publishSection() : null,
+      SHOW_PUBLISH || CLOUD ? publishSection() : null,
       h('h3', null, 'Export options'),
       opt('squarespace', 'Squarespace code block fixes', 'Forces the page background onto Squarespace wrappers, removes their padding and hides the site search bar, like base html does.'),
       h('div', { class: 'field' }, h('label', { class: 'fl' }, 'Layout'),
@@ -963,6 +980,7 @@
   }
   const SHOW_PUBLISH = false; // Publish to the site is set aside for now; flip to bring it back.
   function publishSection() {
+    if (CLOUD) return cloudPublishSection();
     const e = state.exp;
     const btn = h('button', { class: 'primary', onclick: () => publish(btn) }, '🚀 Publish');
     return h('div', null,
@@ -981,6 +999,87 @@
           catch (x) { download('tapdot-code-block.html', code, 'text/html'); }
         } }, '📋 Copy code block')),
       e.pubAt ? h('div', { class: 'hint' }, 'Last published ' + new Date(e.pubAt).toLocaleString() + ' as “' + pubName() + '”.') : null);
+  }
+
+  // ── Portal: save and publish through the church's account ────────────
+  async function cloudFetch(path, opts) {
+    const r = await fetch(CLOUD.api + path, Object.assign({ credentials: 'same-origin' }, opts));
+    let data = {};
+    try { data = await r.json(); } catch (e) { /* not JSON */ }
+    if (r.status === 401) { cloudState('Signed out. Sign in again in another tab, then keep editing.', true); throw Object.assign(new Error('Please sign in again.'), { status: 401 }); }
+    if (!r.ok) throw Object.assign(new Error(data.error || ('Error ' + r.status)), { status: r.status, data });
+    return data;
+  }
+  function cloudState(msg, bad) {
+    const el = $('#saveState');
+    if (!el) return;
+    el.textContent = msg;
+    el.classList.toggle('bad', !!bad);
+  }
+  function cloudQueue() {
+    CLOUD.dirty = true;
+    cloudState('Saving…');
+    clearTimeout(CLOUD.timer);
+    CLOUD.timer = setTimeout(cloudSave, 1200);
+  }
+  async function cloudSave(force) {
+    if (CLOUD.saving) { CLOUD.timer = setTimeout(cloudSave, 500); return; }
+    CLOUD.saving = true; CLOUD.dirty = false;
+    const headers = { 'Content-Type': 'application/json' };
+    if (CLOUD.draftAt) headers['X-TapDot-Base'] = CLOUD.draftAt;
+    if (force) headers['X-TapDot-Force'] = '1';
+    try {
+      const r = await cloudFetch('/draft', { method: 'PUT', headers, body: JSON.stringify(state) });
+      CLOUD.draftAt = r.draftAt;
+      if (!CLOUD.dirty) cloudState('Saved to ' + (CLOUD.churchName || 'the portal'));
+    } catch (e) {
+      CLOUD.dirty = true;
+      if (e.status === 409) {
+        CLOUD.saving = false;
+        const who = (e.data && e.data.draftBy) || 'Someone else';
+        if (confirm(who + ' saved this page after you opened it.\n\nOK: keep your version (replaces theirs).\nCancel: load their version (your changes since then are lost).')) return cloudSave(true);
+        try {
+          const p = await cloudFetch('', {});
+          snapshot(true);
+          state = p.draft ? TD.normalize(p.draft) : state; CLOUD.draftAt = p.draftAt; CLOUD.dirty = false;
+          open = new Set(); firstRender = true; drawPanel(); refresh(); snapshot(true);
+          cloudState('Loaded the newest version');
+        } catch (x) { cloudState('Could not load the newest version: ' + x.message, true); }
+        return;
+      }
+      if (e.status !== 401) cloudState('Not saved: ' + e.message, true);
+    }
+    CLOUD.saving = false;
+  }
+  async function cloudPublish(btn) {
+    btn.disabled = true; btn.textContent = 'Publishing…';
+    try {
+      clearTimeout(CLOUD.timer);
+      if (CLOUD.dirty) await cloudSave();
+      const r = await cloudFetch('/publish', { method: 'POST', headers: { 'Content-Type': 'text/html; charset=utf-8', 'X-TapDot-Title': encodeURIComponent(state.title || CLOUD.name).slice(0, 120) }, body: publishHtml() });
+      CLOUD.publishedAt = r.publishedAt;
+      addVersion('export').catch(() => { /* best effort */ });
+      toast('Published. The live page shows it within a minute.');
+    } catch (e) {
+      toast('Publish failed: ' + e.message);
+    }
+    btn.disabled = false; btn.textContent = '🚀 Publish';
+    if (tab === 'export') drawPanel();
+  }
+  const cloudLoader = () => '<div class="tapdot-page" data-page="' + CLOUD.church + '/' + CLOUD.page + '"></div>\n<scr' + 'ipt src="' + location.origin + '/embed.js"></' + 'script>';
+  function cloudPublishSection() {
+    const btn = h('button', { class: 'primary', onclick: () => cloudPublish(btn) }, '🚀 Publish');
+    const view = location.origin + '/view/' + CLOUD.church + '/' + CLOUD.page;
+    return h('div', null,
+      h('h3', null, 'Publish'),
+      h('p', { class: 'hint' }, 'Your edits save to ' + (CLOUD.churchName || 'the portal') + ' as you go, but visitors only see them after you publish. Paste the code block into Squarespace once; after that, every publish updates the site.'),
+      h('div', { class: 'tabhead' }, btn,
+        h('button', { class: 'ghost', onclick: async () => {
+          try { await navigator.clipboard.writeText(cloudLoader()); toast('Code block copied. Paste it into a Squarespace code block once.'); }
+          catch (x) { download('tapdot-code-block.html', cloudLoader(), 'text/html'); }
+        } }, '📋 Copy code block'),
+        h('a', { class: 'ghost btnlink', href: view, target: '_blank', rel: 'noopener' }, '↗ Live page')),
+      h('div', { class: 'hint' }, CLOUD.publishedAt ? 'Last published ' + new Date(CLOUD.publishedAt).toLocaleString() + '.' : 'Not published yet.'));
   }
 
   async function copyExport() {
@@ -1019,8 +1118,32 @@
   function toast(m) { const t = $('#toast'); t.textContent = m; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2400); }
 
   // ── Boot ─────────────────────────────────────────────────────────────
-  function boot() {
-    state = load();
+  async function boot() {
+    if (CLOUD) {
+      cloudState('Opening…');
+      try {
+        const p = await cloudFetch('', {});
+        CLOUD.draftAt = p.draftAt; CLOUD.name = p.name; CLOUD.churchName = p.church; CLOUD.publishedAt = p.publishedAt;
+        state = p.draft ? TD.normalize(p.draft) : TD.TEMPLATES.blank.build();
+        if (!p.draft) state.title = p.name;
+      } catch (e) {
+        document.body.replaceChildren(h('div', { class: 'cloud-err' }, h('p', null, 'This page could not open: ' + e.message), h('a', { href: '/app/' }, 'Back to the portal')));
+        return;
+      }
+      document.title = CLOUD.name + ' · TapDot';
+      // Pages can hold custom HTML, so the preview runs sandboxed, away from the portal's sign-in.
+      $('#preview').setAttribute('sandbox', 'allow-scripts allow-popups allow-popups-to-escape-sandbox allow-forms allow-modals');
+      $('.brand').replaceChildren(h('a', { href: '/app/#' + CLOUD.church, class: 'back', title: 'Back to the portal' }, '←'), h('span', { class: 'dot' }), CLOUD.name);
+      const pub = h('button', { class: 'primary', title: 'Make your saved edits live' }, '🚀 Publish');
+      pub.onclick = () => cloudPublish(pub);
+      $('#copyBtn').classList.replace('primary', 'ghost');
+      $('#copyBtn').after(pub);
+      window.addEventListener('beforeunload', (e) => { if (CLOUD.dirty || CLOUD.saving) { e.preventDefault(); e.returnValue = ''; } });
+      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && CLOUD.dirty) { clearTimeout(CLOUD.timer); cloudSave(); } });
+      cloudState('Saved to ' + (CLOUD.churchName || 'the portal'));
+    } else {
+      state = load();
+    }
     document.querySelectorAll('.tabs button').forEach((b) => b.addEventListener('click', () => { tab = b.dataset.tab; drawPanel(); }));
     $('#undo').onclick = () => travel(-1);
     $('#redo').onclick = () => travel(1);

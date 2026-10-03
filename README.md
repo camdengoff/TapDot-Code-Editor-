@@ -67,6 +67,59 @@ serves public repos):
 
 5. Only after every client page uses the new address, make the repo private.
 
+## Client portal (tapdot.camdengoff.com/app/)
+
+The portal gives each church an account: its staff sign in, keep their pages online (not just in one
+browser), and publish them. A church pastes one code block into Squarespace per page, once; after that,
+every Publish updates the live page.
+
+- **Sign-in:** email and password, or Sign in with Google. Nobody can sign up on their own: an admin or a
+  church owner adds their email, then copies them a one-time password link (also used for resets). Google
+  sign-in works for anyone who has been added, with no link.
+- **Roles:** admins (`ADMIN_EMAILS`) manage every church. In a church, owners add and remove people;
+  editors create, edit and publish pages.
+- **Pages:** the editor opens at `/app/editor?church=…&page=…` and autosaves to the account. Visitors see
+  only what was last published. If two people edit at once, the second save asks whose version to keep.
+- **Live pages:** `/p/<church>/<page>` is the published HTML the code block loads (via `/embed.js`), and
+  `/view/<church>/<page>` is the same page on its own, handy for QR codes and tap tags.
+
+The Squarespace editor build (`tapdot-editor.js`) and its code block are unchanged and still public.
+
+### One-time setup in Cloudflare
+
+This uses the Cloudflare Pages project from the section above (build `node tools/build.js`, output `dist`;
+Pages picks up the `functions/` folder for the API by itself).
+
+1. Storage & Databases → D1 → Create database (e.g. `tapdot-portal`). The tables are created on first use.
+2. Storage & Databases → KV → Create namespace (e.g. `tapdot-pages`).
+3. Pages project → Settings → Bindings: add the D1 database as `DB` and the KV namespace as `PAGES`.
+4. Pages project → Settings → Variables and secrets (Production):
+   - `ADMIN_EMAILS`: your email (comma-separate several).
+   - `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` (secrets): from Google, below.
+   - `SETUP_KEY` (secret, optional): lets an admin set a password before Google is set up, from
+     "First-time admin setup" on the sign-in page. Delete it once you have signed in.
+5. Pages project → Custom domains: add `tapdot.camdengoff.com`.
+6. Deployments → Retry the latest deployment so the settings take effect, then open
+   `https://tapdot.camdengoff.com/app/`.
+
+### Sign in with Google
+
+1. console.cloud.google.com → create a project (e.g. TapDot).
+2. APIs & Services → OAuth consent screen: External, app name TapDot, your email as support contact.
+   Publish the app so it isn't limited to test users (the email/profile scopes need no Google review).
+3. APIs & Services → Credentials → Create credentials → OAuth client ID → Web application.
+   Authorized redirect URI: `https://tapdot.camdengoff.com/api/auth/google/callback`.
+4. Copy the client ID and secret into the Cloudflare secrets above.
+
+### Run it locally
+
+```sh
+npx wrangler pages dev dist --d1 DB=local-db --kv PAGES
+```
+
+with a `.dev.vars` file (not committed) such as `ADMIN_EMAILS=you@example.com` and `SETUP_KEY=anything`.
+Run `node tools/build.js` after changing `portal/`, `public/` or the editor.
+
 ## Auto-update a Squarespace page (Publish), set aside for now
 
 The Publish button is hidden in the editor (`SHOW_PUBLISH` in `editor/app.js`) until the worker below is set up.
@@ -128,6 +181,10 @@ The worker used is the one in the Pop-up proxy box (the BFC worker by default).
 - `editor/app.js`: editor UI
 - `editor/styles.css`: editor styles
 - `tools/build.js`: builds `dist/tapdot-editor.js`, the single-file version for Squarespace
+- `portal/`: the client portal pages (copied to `dist/app/` by the build)
+- `public/embed.js`: the loader that the live-page code block uses
+- `functions/` and `server/`: the portal API on Cloudflare Pages Functions (`server/api.js` routes,
+  `server/auth.js` sign-in, `server/db.js` tables)
 - `base html`: the original hand-written page the "Bethany tap page" template recreates
 
 ## Pop-up proxy (for sites that won't open in a pop-up)
