@@ -18,6 +18,12 @@
   TD.esc = esc;
   TD.safeUrl = safeUrl;
 
+  // Sites behind Cloudflare (like bethanynaz.org) rewrite every mailto: link in the page into a
+  // /cdn-cgi/l/email-protection address that only works if their script runs after the page
+  // loads, which it doesn't for code blocks. So the address is written encoded (no "mailto:" or
+  // "@" for Cloudflare to find) and the page's script opens it when tapped.
+  const mailAttrs = (href) => ' href="#" data-td-act="mail" data-td-mail="' + esc(String(href).replace(/[^\w.-]/g, (c) => '%' + c.charCodeAt(0).toString(16).padStart(2, '0'))) + '"';
+
   // Mini markup: **bold**, *italic*, ==accent==, [text](url), newlines.
   function md(src, paragraphs) {
     const links = [];
@@ -30,7 +36,7 @@
     });
     s = s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (m, t, u) => {
       const url = safeUrl(u.replace(/&amp;/g, '&'));
-      links.push(url ? '<a href="' + esc(url) + '"' + (/^https?:/i.test(url) ? ' target="_blank" rel="noopener"' : '') + '>' + t + '</a>' : t);
+      links.push(!url ? t : /^mailto:/i.test(url) ? '<a' + mailAttrs(url) + '>' + t + '</a>' : '<a href="' + esc(url) + '"' + (/^https?:/i.test(url) ? ' target="_blank" rel="noopener"' : '') + '>' + t + '</a>');
       return '\u0000' + (links.length - 1) + '\u0000';
     });
     s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
@@ -76,7 +82,7 @@
         return { attrs: ' href="sms:' + esc(String(a.phone || '').replace(/[^\d+]/g, '')) + (a.body ? '?&body=' + encodeURIComponent(a.body) : '') + '"', live: true };
       case 'email': {
         const q = a.subject ? '?subject=' + encodeURIComponent(a.subject) : '';
-        return { attrs: ' href="mailto:' + esc(String(a.email || '').trim()) + q + '"', live: true };
+        return { attrs: mailAttrs('mailto:' + String(a.email || '').trim() + q), live: true };
       }
       case 'scroll':
         return { attrs: ' href="#' + esc(a.target || '') + '"' + d('act', 'scroll'), live: true };
@@ -617,6 +623,10 @@ ${t.pressFx ? '.td-tap:active{transform:scale(.97)}' : ''}
       switch (g('act')) {
         case 'popup': openPage(a.getAttribute('href'), g('title'), g('icon'), g('host')); break;
         case 'sheet': openSheet('td-sheet-' + g('sheet')); break;
+        case 'mail':
+          var mt = ''; try { mt = decodeURIComponent(g('mail')); } catch (x) {}
+          if (/^mailto:/i.test(mt)) W.location.href = mt;
+          break;
         case 'copy': copy(g('text'), g('toast')); break;
         case 'scroll': closeAll(); scrollToId(a.getAttribute('href').slice(1)); break;
         case 'zoom': $('#td-zoom-img').src = g('src'); $('#td-zoom').classList.add('open'); lock(true); break;
